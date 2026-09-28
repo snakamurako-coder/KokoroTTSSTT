@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <title>Kokoro TTS Studio (ダウンロード進捗対応)</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; background-color: #f9f9f9;}
+    .container { background-color: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    h2 { margin-top: 0; color: #333; }
+    .control-group { margin-bottom: 15px; }
+    label { font-size: 0.9em; font-weight: bold; color: #555; }
+    select, textarea, button { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 1em; }
+    textarea { height: 120px; resize: vertical; }
+    
+    /* ボタンのスタイル */
+    button { color: white; border: none; cursor: pointer; font-weight: bold; transition: background 0.3s; }
+    #downloadBtn { background-color: #ff9800; }
+    #downloadBtn:hover { background-color: #f57c00; }
+    #generateBtn { background-color: #4CAF50; margin-top: 15px;}
+    #generateBtn:hover { background-color: #45a049; }
+    button:disabled { background-color: #cccccc; cursor: not-allowed; }
+
+    /* ダウンロード状況エリア */
+    #setupArea { background-color: #fff3e0; padding: 15px; border-radius: 4px; border: 1px solid #ffcc80; margin-bottom: 20px; }
+    #progressText { margin-top: 10px; font-size: 0.85em; color: #333; font-family: monospace;}
+    progress { width: 100%; height: 20px; margin-top: 5px; }
+
+    #status { margin-top: 10px; font-size: 0.9em; color: #d32f2f; font-weight: bold; text-align: center; }
+    #resultArea { display: none; margin-top: 20px; padding: 15px; border: 1px solid #4CAF50; border-radius: 4px; background-color: #e8f5e9; }
+    #downloadLink { display: block; text-align: center; background: #2196F3; color: white; padding: 10px; text-decoration: none; border-radius: 4px; margin-top: 15px; font-weight: bold; }
+    #downloadLink:hover { background: #1976d2; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>スピーチ音声 ジェネレーター</h2>
+
+    <!-- ① AIモデルのダウンロードエリア -->
+    <div id="setupArea">
+      <p style="margin-top: 0; font-size: 0.9em;">最初にAIモデル(約80MB)をブラウザにダウンロードします。</p>
+      <button id="downloadBtn">AIモデルをダウンロード</button>
+      <progress id="progressBar" value="0" max="100" style="display: none;"></progress>
+      <div id="progressText"></div>
+    </div>
+    
+    <div class="control-group">
+      <label>テキスト (英語または日本語)</label>
+      <textarea id="inputText">Hello! This is a test speech for shadowing practice. Kokoro TTS works perfectly in the browser.</textarea>
+    </div>
+
+    <div class="control-group">
+      <label>言語・音声モデル</label>
+      <select id="voiceModel">
+        <option value="af_heart">英語 (女性 - 米国)</option>
+        <option value="am_adam">英語 (男性 - 米国)</option>
+        <option value="jf_alpha">日本語 (女性)</option>
+      </select>
+    </div>
+
+    <!-- 音質設定（隠したい場合は style="display:none;" を追加してください） -->
+    <div style="display: flex; gap: 10px;">
+      <div class="control-group" style="flex: 1;">
+        <label>チャンネル</label>
+        <select id="channel">
+          <option value="1">モノラル</option>
+          <option value="2">ステレオ</option>
+        </select>
+      </div>
+      <div class="control-group" style="flex: 1;">
+        <label>サンプルレート</label>
+        <select id="sampleRate">
+          <option value="24000">24kHz</option>
+          <option value="16000">16kHz</option>
+        </select>
+      </div>
+      <div class="control-group" style="flex: 1;">
+        <label>ビットレート</label>
+        <select id="bitrate">
+          <option value="24000">24 kbps</option>
+          <option value="64000">64 kbps</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- ② 生成ボタン (初期状態では無効化) -->
+    <button id="generateBtn" disabled>音声を生成 (プレビュー＆ダウンロード)</button>
+    <p id="status"></p>
+
+    <!-- 結果表示エリア -->
+    <div id="resultArea">
+      <p style="margin-top: 0; font-weight: bold; color: #333;">プレビュー再生:</p>
+      <audio id="audioPlayer" controls style="width: 100%;"></audio>
+      <a id="downloadLink" href="#" download="speech.webm">
+        この音声をダウンロード (.webm)
+      </a>
+    </div>
+  </div>
+
+  <!-- 最新版の Transformers.js 読み込み (Kokoro対応版) -->
+  <script type="module">
+    import { pipeline } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers';
+    
+    // UI要素の取得
+    const downloadBtn = document.getElementById('downloadBtn');
+    const generateBtn = document.getElementById('generateBtn');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    const setupArea = document.getElementById('setupArea');
+    const statusText = document.getElementById('status');
+    const resultArea = document.getElementById('resultArea');
+    const audioPlayer = document.getElementById('audioPlayer');
+    const downloadLink = document.getElementById('downloadLink');
+
+    let synthesizer = null;
+
+    // ==========================================
+    // 1. AIモデルのダウンロード処理
+    // ==========================================
+    downloadBtn.addEventListener('click', async () => {
+      try {
+        downloadBtn.disabled = true;
+        progressBar.style.display = 'block';
+        progressText.innerText = 'ダウンロードを開始しています...';
+
+        // プログレスコールバックを使って進捗を表示
+        synthesizer = await pipeline('text-to-speech', 'onnx-community/Kokoro-82M-ONNX', {
+          dtype: 'q8',
+          progress_callback: (data) => {
+            if (data.status === 'downloading') {
+              progressText.innerText = `${data.file} をダウンロード中...`;
+            } else if (data.status === 'progress') {
+              progressBar.value = data.progress;
+              progressText.innerText = `${data.file} : ${Math.round(data.progress)}%`;
+            } else if (data.status === 'done') {
+              progressText.innerText = `${data.file} の準備が完了しました`;
+            }
+          }
+        });
+
+        // ダウンロード完了後のUI変更
+        progressText.innerText = '✅ モデルの準備が完了しました！音声を生成できます。';
+        progressText.style.color = 'green';
+        progressBar.style.display = 'none';
+        downloadBtn.style.display = 'none';
+        generateBtn.disabled = false; // 生成ボタンを有効化
+
+      } catch (err) {
+        progressText.innerText = 'エラーが発生しました: ' + err.message;
+        progressText.style.color = 'red';
+        downloadBtn.disabled = false;
+        console.error(err);
+      }
+    });
+
+    // ==========================================
+    // 2. 音声の生成処理
+    // ==========================================
+    generateBtn.addEventListener('click', async () => {
+      const text = document.getElementById('inputText').value;
+      if (!text || !synthesizer) return;
+
+      try {
+        generateBtn.disabled = true;
+        resultArea.style.display = 'none';
+        statusText.innerText = 'テキストから音声を生成中... (少し時間がかかります)';
+
+        const voiceId = document.getElementById('voiceModel').value;
+        
+        // 音声生成
+        const result = await synthesizer(text, {
+          voice: voiceId
+        });
+
+        const rawAudioData = result.audio;
+        const originalSampleRate = result.sampling_rate;
+
+        statusText.innerText = '音声の圧縮とWebMフォーマットへの変換中...';
+
+        const targetChannels = parseInt(document.getElementById('channel').value);
+        const targetSampleRate = parseInt(document.getElementById('sampleRate').value);
+        const targetBitrate = parseInt(document.getElementById('bitrate').value);
+
+        // WebMへ変換
+        const webmBlob = await encodeToWebM(rawAudioData, originalSampleRate, targetChannels, targetSampleRate, targetBitrate);
+
+        const audioUrl = URL.createObjectURL(webmBlob);
+        audioPlayer.src = audioUrl;
+        downloadLink.href = audioUrl;
+        
+        const dateStr = new Date().toISOString().replace(/[:.]/g, '-');
+        downloadLink.download = `speech_${dateStr}.webm`;
+        
+        statusText.innerText = '完了しました！';
+        resultArea.style.display = 'block';
+
+      } catch (err) {
+        statusText.innerText = 'エラーが発生しました: ' + err.message;
+        console.error(err);
+      } finally {
+        generateBtn.disabled = false;
+      }
+    });
+
+    // ==========================================
+    // 3. WebM変換用の関数
+    // ==========================================
+    async function encodeToWebM(pcmData, originalSampleRate, channels, sampleRate, bitrate) {
+      return new Promise((resolve) => {
+        const ctx = new AudioContext({ sampleRate: sampleRate });
+        const audioBuffer = ctx.createBuffer(1, pcmData.length, originalSampleRate);
+        audioBuffer.getChannelData(0).set(pcmData);
+
+        const dest = ctx.createMediaStreamDestination();
+        dest.channelCount = channels;
+
+        const source = ctx.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(dest);
+
+        const recorder = new MediaRecorder(dest.stream, {
+          mimeType: 'audio/webm;codecs=opus',
+          audioBitsPerSecond: bitrate
+        });
+
+        const chunks = [];
+        recorder.ondataavailable = (e) => {
+          if (e.data.size > 0) chunks.push(e.data);
+        };
+
+        recorder.onstop = () => {
+          const blob = new Blob(chunks, { type: 'audio/webm' });
+          ctx.close();
+          resolve(blob);
+        };
+
+        recorder.start();
+        source.start();
+        source.onended = () => recorder.stop();
+      });
+    }
+  </script>
+</body>
+</html>
