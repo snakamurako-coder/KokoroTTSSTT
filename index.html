@@ -90,9 +90,13 @@
     <div id="resultArea">
       <p style="margin-top: 0; font-weight: bold; color: #333;">プレビュー再生:</p>
       <audio id="audioPlayer" controls style="width: 100%;"></audio>
-      <a id="downloadLink" href="#" download="speech.webm">
-        この音声をダウンロード (.webm)
-      </a>
+      <div style="display: flex; gap: 10px; margin-top: 15px;">
+        <a id="downloadLink" href="#" download="speech.webm" style="flex: 1; text-align: center; background: #2196F3; color: white; padding: 10px; text-decoration: none; border-radius: 4px; font-weight: bold;">
+          この音声をダウンロード (.webm)
+        </a>
+        <button id="saveDriveBtn" style="flex: 1; background-color: #009688; margin-top: 0;">Googleドライブに保存</button>
+      </div>
+      <p id="driveStatus" style="font-size: 0.85em; text-align: center; margin-top: 10px;"></p>
     </div>
   </div>
 
@@ -110,8 +114,14 @@
     const resultArea = document.getElementById('resultArea');
     const audioPlayer = document.getElementById('audioPlayer');
     const downloadLink = document.getElementById('downloadLink');
+    const saveDriveBtn = document.getElementById('saveDriveBtn');
+    const driveStatus = document.getElementById('driveStatus');
 
     let synthesizer = null;
+    let currentAudioBlob = null; // 生成された音声Blobを保持
+    
+    // GASのデプロイURL
+    const GAS_URL = 'https://script.google.com/a/macros/yamagataps.jp/s/AKfycbziNWHuvaUGs6V2deH5-DYVy9FZ1YjTQH0pULC81sk-KnyxKnD7FYGbX6s8Dfh9rAoWkw/exec';
 
     // ==========================================
     // 1. AIモデルのダウンロード処理
@@ -190,6 +200,10 @@
         const dateStr = new Date().toISOString().replace(/[:.]/g, '-');
         downloadLink.download = `speech_${dateStr}.webm`;
         
+        currentAudioBlob = webmBlob; // 保存用に保持
+        driveStatus.innerText = '';
+        saveDriveBtn.disabled = false;
+        
         statusText.innerText = '完了しました！';
         resultArea.style.display = 'block';
 
@@ -202,7 +216,68 @@
     });
 
     // ==========================================
-    // 3. WebM変換用の関数
+    // 3. Googleドライブへの保存処理
+    // ==========================================
+    function blobToBase64(blob) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          // data:audio/webm;base64, の部分を削除して返す
+          const base64data = reader.result.split(',')[1];
+          resolve(base64data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    saveDriveBtn.addEventListener('click', async () => {
+      if (!currentAudioBlob) return;
+      try {
+        saveDriveBtn.disabled = true;
+        driveStatus.innerText = 'Googleドライブへ保存中... (しばらくお待ちください)';
+        driveStatus.style.color = '#333';
+        
+        const base64Data = await blobToBase64(currentAudioBlob);
+        
+        const text = document.getElementById('inputText').value;
+        const voiceModel = document.getElementById('voiceModel').options[document.getElementById('voiceModel').selectedIndex].text;
+        const channel = document.getElementById('channel').options[document.getElementById('channel').selectedIndex].text;
+        const sampleRate = document.getElementById('sampleRate').options[document.getElementById('sampleRate').selectedIndex].text;
+        const bitrate = document.getElementById('bitrate').options[document.getElementById('bitrate').selectedIndex].text;
+        
+        const payload = {
+          text: text,
+          voiceModel: voiceModel,
+          settings: `チャンネル: ${channel}, サンプルレート: ${sampleRate}, ビットレート: ${bitrate}`,
+          audioBase64: base64Data
+        };
+
+        const response = await fetch(GAS_URL, {
+          method: 'POST',
+          // GASでCORSエラーを防ぐため text/plain を使用
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8',
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        if (result.status === 'success') {
+          driveStatus.innerHTML = `✅ 保存成功！ <a href="${result.url}" target="_blank">Googleドライブで開く</a>`;
+          driveStatus.style.color = 'green';
+        } else {
+          throw new Error(result.message || '保存に失敗しました');
+        }
+      } catch (err) {
+        driveStatus.innerText = `❌ エラー: ${err.message}`;
+        driveStatus.style.color = 'red';
+        saveDriveBtn.disabled = false;
+      }
+    });
+
+    // ==========================================
+    // 4. WebM変換用の関数
     // ==========================================
     async function encodeToWebM(pcmData, originalSampleRate, channels, sampleRate, bitrate) {
       return new Promise((resolve) => {
