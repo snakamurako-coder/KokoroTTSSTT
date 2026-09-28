@@ -102,7 +102,7 @@
 
   <!-- 最新版の Transformers.js 読み込み (Kokoro対応版) -->
   <script type="module">
-    import { pipeline } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers';
+    import { KokoroTTS } from 'https://cdn.jsdelivr.net/npm/kokoro-js@1.2.1/+esm';
     
     // UI要素の取得
     const downloadBtn = document.getElementById('downloadBtn');
@@ -132,9 +132,11 @@
         progressBar.style.display = 'block';
         progressText.innerText = 'ダウンロードを開始しています...';
 
-        // プログレスコールバックを使って進捗を表示
-        synthesizer = await pipeline('text-to-speech', 'onnx-community/Kokoro-82M-ONNX', {
+        // プログレスコールバックを使って進捗を表示（※kokoro-jsがprogress_callbackをサポートしている場合は反映されます）
+        synthesizer = await KokoroTTS.from_pretrained('onnx-community/Kokoro-82M-v1.0-ONNX', {
           dtype: 'q8',
+          device: 'wasm',
+          // progress_callback を一応渡しておく
           progress_callback: (data) => {
             if (data.status === 'downloading') {
               progressText.innerText = `${data.file} をダウンロード中...`;
@@ -177,7 +179,7 @@
         const voiceId = document.getElementById('voiceModel').value;
         
         // 音声生成
-        const result = await synthesizer(text, {
+        const result = await synthesizer.generate(text, {
           voice: voiceId
         });
 
