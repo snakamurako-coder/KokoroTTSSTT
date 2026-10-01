@@ -47,16 +47,18 @@
     <div class="control-group">
       <label>テキスト (複数行や対話に対応)</label>
       <p style="font-size: 0.8em; color: #666; margin: 2px 0 5px 0;">
-        行頭に <code>US_F:</code> のように書くと、行ごとに話者を切り替えられます。<br>
-        【利用可能タグ】 <code>US_F</code>(米・女), <code>US_M</code>(米・男), <code>UK_F</code>(英・女), <code>UK_M</code>(英・男), <code>JP_F</code>(日・女), <code>JP_M</code>(日・男)<br>
-        <span style="color: #d32f2f; font-weight: bold;">※ 生成される対話音声は、自動的に1つのファイルにまとまってダウンロードできます。</span>
+        行頭に <code>US_F1:</code> のように書くと、行ごとに話者を切り替えられます。<br>
+        【利用可能タグ】 <code>US_F1</code>(米・女), <code>US_F2</code>(米・女/高め), <code>US_M1</code>(米・男), <code>US_M2</code>(米・男/低め), <code>UK_F</code>(英・女), <code>UK_M</code>(英・男)<br>
+        <span style="color: #d32f2f; font-weight: bold;">※ 生成される対話音声は、自動的に1つのファイルにまとまってダウンロードできます。</span><br>
+        <span style="color: #ff9800; font-weight: bold;">※ 現在のブラウザ版ONNXモデルは英語のみ収録されています。テキストは英語で入力してください。</span>
       </p>
       <textarea id="inputText" style="height: 150px;">
-US_F: Hello! This is a demonstration of the dialogue feature.
-UK_M: Oh, really? How does my British accent sound?
-US_M: It sounds great, mate! I'm the American male voice.
-JP_F: もちろん、日本語も交えることができますよ。
-JP_M: それは便利ですね！色々な声を使ってみましょう。
+US_F1: Hello! This is a demonstration of the dialogue feature.
+US_F2: Hi there! I'm another female voice with a slightly different tone.
+US_M1: It sounds great! I'm the standard American male voice.
+US_M2: And I have a deeper voice. How does this sound?
+UK_F: I am the British female voice. It's lovely to meet you all.
+UK_M: Quite right! The British male voice here, ready to go.
       </textarea>
     </div>
 
@@ -64,12 +66,12 @@ JP_M: それは便利ですね！色々な声を使ってみましょう。
       <div class="control-group" style="flex: 1;">
         <label>デフォルトの言語・音声モデル</label>
         <select id="voiceModel">
-          <option value="af_heart">英語 (米国・女性) - US_F</option>
-          <option value="am_adam">英語 (米国・男性) - US_M</option>
+          <option value="af_heart">英語 (米国・女性1) - US_F1</option>
+          <option value="af_sky">英語 (米国・女性2/高め) - US_F2</option>
+          <option value="am_adam">英語 (米国・男性1) - US_M1</option>
+          <option value="am_onyx">英語 (米国・男性2/低め) - US_M2</option>
           <option value="bf_emma">英語 (英国・女性) - UK_F</option>
           <option value="bm_george">英語 (英国・男性) - UK_M</option>
-          <option value="jf_alpha">日本語 (女性) - JP_F</option>
-          <option value="jm_kumo">日本語 (男性) - JP_M</option>
         </select>
       </div>
 
@@ -207,12 +209,12 @@ JP_M: それは便利ですね！色々な声を使ってみましょう。
     });
 
     const voiceMap = {
-      'US_F': 'af_heart',
-      'US_M': 'am_adam',
-      'UK_F': 'bf_emma',
-      'UK_M': 'bm_george',
-      'JP_F': 'jf_alpha',
-      'JP_M': 'jm_kumo'
+      'US_F1': 'af_heart',
+      'US_F2': 'af_sky',
+      'US_M1': 'am_adam',
+      'US_M2': 'am_onyx',
+      'UK_F':  'bf_emma',
+      'UK_M':  'bm_george'
     };
 
     // ==========================================
@@ -237,8 +239,8 @@ JP_M: それは便利ですね！色々な声を使ってみましょう。
           
           let voiceId = defaultVoiceId;
           
-          // [US_F]: または US_F: のようなタグを検出
-          const match = line.match(/^\[?(US_F|US_M|UK_F|UK_M|JP_F|JP_M)\]?[:：]\s*(.*)/i);
+          // [US_F1]: または US_F1: のようなタグを検出
+          const match = line.match(/^\[?(US_F1|US_F2|US_M1|US_M2|UK_F|UK_M)\]?[:：]\s*(.*)/i);
           if (match) {
             const voiceKey = match[1].toUpperCase();
             voiceId = voiceMap[voiceKey] || defaultVoiceId;
