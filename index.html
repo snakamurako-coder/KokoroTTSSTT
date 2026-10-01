@@ -220,16 +220,19 @@
       <option value="bm_george">英国・男性 (UK_M)</option>
     `;
 
-    function createDialogueBlock(text = '', voiceId = 'af_heart') {
+    function createDialogueBlock(text = '', voiceId = 'af_heart', speakerName = '') {
       const block = document.createElement('div');
       block.className = 'dialogue-block';
       block.style.cssText = 'border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; border-radius: 4px; background-color: #fafafa;';
       
       block.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-          <select class="block-voice" style="width: auto; padding: 5px; flex: 1; margin-right: 10px; font-weight: bold; background: #fff; border: 1px solid #ccc; border-radius: 4px;">
-            ${voiceOptionsHtml}
-          </select>
+          <div style="display: flex; gap: 5px; flex: 1; margin-right: 10px;">
+            <input type="text" class="block-speaker-name" placeholder="話者名 (任意)" value="${speakerName}" style="width: 120px; padding: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+            <select class="block-voice" style="width: auto; padding: 5px; flex: 1; font-weight: bold; background: #fff; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+              ${voiceOptionsHtml}
+            </select>
+          </div>
           <div style="display: flex; gap: 5px;">
             <button class="split-btn" style="background-color: #607d8b; padding: 5px 10px; width: auto; font-size: 0.8em; margin-top: 0; color: white; border: none; border-radius: 4px; cursor: pointer;">カーソル位置で分割</button>
             <button class="delete-btn" style="background-color: #f44336; padding: 5px 10px; width: auto; font-size: 0.8em; margin-top: 0; color: white; border: none; border-radius: 4px; cursor: pointer;">削除</button>
@@ -254,13 +257,15 @@
         const textAll = textarea.value;
         
         if (cursorPos === undefined || cursorPos === textAll.length) {
-          const newBlock = createDialogueBlock('', voiceId);
+          const currentSpeaker = block.querySelector('.block-speaker-name').value;
+          const newBlock = createDialogueBlock('', voiceId, currentSpeaker);
           block.after(newBlock);
         } else {
           const textBefore = textAll.substring(0, cursorPos);
           const textAfter = textAll.substring(cursorPos);
           textarea.value = textBefore;
-          const newBlock = createDialogueBlock(textAfter.trim(), voiceId);
+          const currentSpeaker = block.querySelector('.block-speaker-name').value;
+          const newBlock = createDialogueBlock(textAfter.trim(), voiceId, currentSpeaker);
           block.after(newBlock);
         }
       });
@@ -272,11 +277,8 @@
       dialogueContainer.appendChild(createDialogueBlock());
     });
 
-    // 初期データの挿入
-    dialogueContainer.appendChild(createDialogueBlock("Hello! This is a demonstration of the dialogue feature.", "af_heart"));
-    dialogueContainer.appendChild(createDialogueBlock("Hi there! I'm another female voice with a slightly different tone.", "af_sky"));
-    dialogueContainer.appendChild(createDialogueBlock("It sounds great! I'm the standard American male voice.", "am_adam"));
-    dialogueContainer.appendChild(createDialogueBlock("And I have a deeper voice. How does this sound?", "am_onyx"));
+    // 初期データの挿入: 空のブロックを1つだけ生成
+    dialogueContainer.appendChild(createDialogueBlock("", "af_heart"));
 
     // ==========================================
     // 2. 音声の生成処理
@@ -296,6 +298,10 @@
         for (let b = 0; b < blocks.length; b++) {
           const block = blocks[b];
           const voiceId = block.querySelector('.block-voice').value;
+          const speakerName = block.querySelector('.block-speaker-name').value.trim();
+          const voiceLabel = block.querySelector('.block-voice').options[block.querySelector('.block-voice').selectedIndex].text.split(' ')[0];
+          const displaySpeaker = speakerName ? speakerName : voiceLabel;
+          
           const blockText = block.querySelector('.block-text').value.trim();
           
           if (!blockText) continue;
@@ -309,7 +315,7 @@
             line = line.replace(/^\[?(US_F1|US_F2|US_M1|US_M2|UK_F|UK_M)\]?[:：]\s*/i, '');
             if (!line) continue;
             
-            statusText.innerText = `音声生成中... (ブロック ${b + 1}/${blocks.length}, 行 ${i + 1}/${lines.length})`;
+            statusText.innerText = `音声生成中... (${displaySpeaker} - ブロック ${b + 1}/${blocks.length}, 行 ${i + 1}/${lines.length})`;
             
             const result = await synthesizer.generate(line, { voice: voiceId, speed: speedParam });
             
@@ -413,10 +419,13 @@
         blocks.forEach((b, index) => {
            const select = b.querySelector('.block-voice');
            const v = select.options[select.selectedIndex].text.split(' ')[0]; // 短くするため最初の部分だけ
+           const speakerName = b.querySelector('.block-speaker-name').value.trim();
+           const displayName = speakerName ? `${speakerName} (${v})` : v;
+           
            const t = b.querySelector('.block-text').value.trim();
            if(t) {
-             fullText += `[B${index+1}: ${v}] ${t}\n`;
-             usedVoices.add(v);
+             fullText += `[B${index+1}: ${displayName}] ${t}\n`;
+             usedVoices.add(displayName);
            }
         });
 
