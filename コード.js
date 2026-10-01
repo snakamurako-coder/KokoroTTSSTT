@@ -73,8 +73,13 @@ function doPost(e) {
     
     // 音声ファイルの保存
     const decodedAudio = Utilities.base64Decode(audioBase64);
-    const fileName = `speech_${new Date().toISOString().replace(/[:.]/g, '-')}.webm`;
-    const blob = Utilities.newBlob(decodedAudio, 'audio/webm', fileName);
+    const format = data.format || 'webm';
+    let mimeType = 'audio/webm';
+    if (format === 'wav') mimeType = 'audio/wav';
+    else if (format === 'mp3') mimeType = 'audio/mp3';
+    
+    const fileName = `speech_${new Date().toISOString().replace(/[:.]/g, '-')}.${format}`;
+    const blob = Utilities.newBlob(decodedAudio, mimeType, fileName);
     const file = folder.createFile(blob);
     const fileUrl = file.getUrl();
     

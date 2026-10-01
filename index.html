@@ -30,6 +30,7 @@
     #downloadLink { display: block; text-align: center; background: #2196F3; color: white; padding: 10px; text-decoration: none; border-radius: 4px; margin-top: 15px; font-weight: bold; }
     #downloadLink:hover { background: #1976d2; }
   </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
 </head>
 <body>
   <div class="container">
@@ -44,40 +45,74 @@
     </div>
     
     <div class="control-group">
-      <label>テキスト (英語または日本語)</label>
-      <textarea id="inputText">Hello! This is a test speech for shadowing practice. Kokoro TTS works perfectly in the browser.</textarea>
+      <label>テキスト (複数行や対話に対応)</label>
+      <p style="font-size: 0.8em; color: #666; margin: 2px 0 5px 0;">
+        行頭に <code>US_F:</code> のように書くと、行ごとに話者を切り替えられます。<br>
+        【利用可能タグ】 <code>US_F</code>(米・女), <code>US_M</code>(米・男), <code>UK_F</code>(英・女), <code>UK_M</code>(英・男), <code>JP_F</code>(日・女), <code>JP_M</code>(日・男)<br>
+        <span style="color: #d32f2f; font-weight: bold;">※ 生成される対話音声は、自動的に1つのファイルにまとまってダウンロードできます。</span>
+      </p>
+      <textarea id="inputText" style="height: 150px;">
+US_F: Hello! This is a demonstration of the dialogue feature.
+UK_M: Oh, really? How does my British accent sound?
+US_M: It sounds great, mate! I'm the American male voice.
+JP_F: もちろん、日本語も交えることができますよ。
+JP_M: それは便利ですね！色々な声を使ってみましょう。
+      </textarea>
     </div>
 
-    <div class="control-group">
-      <label>言語・音声モデル</label>
-      <select id="voiceModel">
-        <option value="af_heart">英語 (女性 - 米国)</option>
-        <option value="am_adam">英語 (男性 - 米国)</option>
-        <option value="jf_alpha">日本語 (女性)</option>
-      </select>
-    </div>
-
-    <!-- 音質設定（隠したい場合は style="display:none;" を追加してください） -->
     <div style="display: flex; gap: 10px;">
       <div class="control-group" style="flex: 1;">
+        <label>デフォルトの言語・音声モデル</label>
+        <select id="voiceModel">
+          <option value="af_heart">英語 (米国・女性) - US_F</option>
+          <option value="am_adam">英語 (米国・男性) - US_M</option>
+          <option value="bf_emma">英語 (英国・女性) - UK_F</option>
+          <option value="bm_george">英語 (英国・男性) - UK_M</option>
+          <option value="jf_alpha">日本語 (女性) - JP_F</option>
+          <option value="jm_kumo">日本語 (男性) - JP_M</option>
+        </select>
+      </div>
+
+      <div class="control-group" style="flex: 1;">
+        <label>出力フォーマット</label>
+        <select id="outputFormat">
+          <option value="webm">WebM (標準・軽量)</option>
+          <option value="wav">WAV (高音質・非圧縮)</option>
+          <option value="mp3">MP3 (汎用)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- パラメーター調整（簡易版と詳細版を切り替え） -->
+    <div style="margin-bottom: 10px;">
+      <label style="cursor: pointer; display: inline-flex; align-items: center; color: #2196F3;">
+        <input type="checkbox" id="toggleAdvanced" style="width: auto; margin: 0 8px 0 0;">
+        詳細設定（パラメーター調整）を表示
+      </label>
+    </div>
+
+    <!-- 音質設定（初期状態では非表示） -->
+    <div id="advancedSettings" style="display: none; gap: 10px; margin-bottom: 15px;">
+      <div class="control-group" style="flex: 1; margin-bottom: 0;">
         <label>チャンネル</label>
         <select id="channel">
           <option value="1">モノラル</option>
           <option value="2">ステレオ</option>
         </select>
       </div>
-      <div class="control-group" style="flex: 1;">
+      <div class="control-group" style="flex: 1; margin-bottom: 0;">
         <label>サンプルレート</label>
         <select id="sampleRate">
           <option value="24000">24kHz</option>
           <option value="16000">16kHz</option>
         </select>
       </div>
-      <div class="control-group" style="flex: 1;">
-        <label>ビットレート</label>
+      <div class="control-group" style="flex: 1; margin-bottom: 0;">
+        <label>ビットレート (WebM/MP3)</label>
         <select id="bitrate">
-          <option value="24000">24 kbps</option>
           <option value="64000">64 kbps</option>
+          <option value="128000">128 kbps</option>
+          <option value="192000">192 kbps</option>
         </select>
       </div>
     </div>
@@ -164,6 +199,22 @@
       }
     });
 
+    // 詳細設定のトグル処理
+    const toggleAdvanced = document.getElementById('toggleAdvanced');
+    const advancedSettings = document.getElementById('advancedSettings');
+    toggleAdvanced.addEventListener('change', (e) => {
+      advancedSettings.style.display = e.target.checked ? 'flex' : 'none';
+    });
+
+    const voiceMap = {
+      'US_F': 'af_heart',
+      'US_M': 'am_adam',
+      'UK_F': 'bf_emma',
+      'UK_M': 'bm_george',
+      'JP_F': 'jf_alpha',
+      'JP_M': 'jm_kumo'
+    };
+
     // ==========================================
     // 2. 音声の生成処理
     // ==========================================
@@ -174,35 +225,85 @@
       try {
         generateBtn.disabled = true;
         resultArea.style.display = 'none';
-        statusText.innerText = 'テキストから音声を生成中... (少し時間がかかります)';
-
-        const voiceId = document.getElementById('voiceModel').value;
         
-        // 音声生成
-        const result = await synthesizer.generate(text, {
-          voice: voiceId
-        });
+        const defaultVoiceId = document.getElementById('voiceModel').value;
+        const lines = text.split('\n');
+        let combinedAudio = [];
+        let originalSampleRate = null;
 
-        const rawAudioData = result.audio;
-        const originalSampleRate = result.sampling_rate;
+        for (let i = 0; i < lines.length; i++) {
+          let line = lines[i].trim();
+          if (!line) continue;
+          
+          let voiceId = defaultVoiceId;
+          
+          // [US_F]: または US_F: のようなタグを検出
+          const match = line.match(/^\[?(US_F|US_M|UK_F|UK_M|JP_F|JP_M)\]?[:：]\s*(.*)/i);
+          if (match) {
+            const voiceKey = match[1].toUpperCase();
+            voiceId = voiceMap[voiceKey] || defaultVoiceId;
+            line = match[2].trim();
+          }
+          
+          if (!line) continue;
+          
+          statusText.innerText = `音声生成中... (${i + 1}/${lines.length}行目)`;
+          
+          const result = await synthesizer.generate(line, { voice: voiceId });
+          
+          if (!originalSampleRate) {
+            originalSampleRate = result.sampling_rate;
+          }
+          combinedAudio.push(result.audio);
+        }
+
+        if (combinedAudio.length === 0) {
+          throw new Error("生成するテキストがありません。");
+        }
+
+        // 複数行の音声を連結（行の間に0.3秒の無音を挿入）
+        const silenceLength = Math.floor(originalSampleRate * 0.3);
+        const totalLength = combinedAudio.reduce((sum, arr) => sum + arr.length, 0) + silenceLength * Math.max(0, combinedAudio.length - 1);
+        const pcmData = new Float32Array(totalLength);
+        
+        let offset = 0;
+        for (let i = 0; i < combinedAudio.length; i++) {
+          pcmData.set(combinedAudio[i], offset);
+          offset += combinedAudio[i].length;
+          if (i < combinedAudio.length - 1) {
+            offset += silenceLength;
+          }
+        }
+
+        const rawAudioData = pcmData;
 
         statusText.innerText = '音声の圧縮とWebMフォーマットへの変換中...';
 
         const targetChannels = parseInt(document.getElementById('channel').value);
         const targetSampleRate = parseInt(document.getElementById('sampleRate').value);
         const targetBitrate = parseInt(document.getElementById('bitrate').value);
+        const outputFormat = document.getElementById('outputFormat').value;
 
-        // WebMへ変換
-        const webmBlob = await encodeToWebM(rawAudioData, originalSampleRate, targetChannels, targetSampleRate, targetBitrate);
+        statusText.innerText = `音声の圧縮と ${outputFormat.toUpperCase()} フォーマットへの変換中...`;
 
-        const audioUrl = URL.createObjectURL(webmBlob);
+        let finalBlob;
+        if (outputFormat === 'webm') {
+          finalBlob = await encodeToWebM(rawAudioData, originalSampleRate, targetChannels, targetSampleRate, targetBitrate);
+        } else if (outputFormat === 'wav') {
+          finalBlob = await encodeToWav(rawAudioData, originalSampleRate, targetChannels, targetSampleRate);
+        } else if (outputFormat === 'mp3') {
+          finalBlob = await encodeToMp3(rawAudioData, originalSampleRate, targetChannels, targetSampleRate, targetBitrate);
+        }
+
+        const audioUrl = URL.createObjectURL(finalBlob);
         audioPlayer.src = audioUrl;
         downloadLink.href = audioUrl;
         
         const dateStr = new Date().toISOString().replace(/[:.]/g, '-');
-        downloadLink.download = `speech_${dateStr}.webm`;
+        downloadLink.download = `speech_${dateStr}.${outputFormat}`;
+        downloadLink.innerText = `この音声をダウンロード (.${outputFormat})`;
         
-        currentAudioBlob = webmBlob; // 保存用に保持
+        currentAudioBlob = finalBlob; // 保存用に保持
         driveStatus.innerText = '';
         saveDriveBtn.disabled = false;
         
@@ -247,12 +348,14 @@
         const channel = document.getElementById('channel').options[document.getElementById('channel').selectedIndex].text;
         const sampleRate = document.getElementById('sampleRate').options[document.getElementById('sampleRate').selectedIndex].text;
         const bitrate = document.getElementById('bitrate').options[document.getElementById('bitrate').selectedIndex].text;
+        const outputFormat = document.getElementById('outputFormat').value;
         
         const payload = {
           text: text,
           voiceModel: voiceModel,
           settings: `チャンネル: ${channel}, サンプルレート: ${sampleRate}, ビットレート: ${bitrate}`,
-          audioBase64: base64Data
+          audioBase64: base64Data,
+          format: outputFormat
         };
 
         const response = await fetch(GAS_URL, {
@@ -279,14 +382,28 @@
     });
 
     // ==========================================
-    // 4. WebM変換用の関数
+    // 4. 音声変換関数群 (WebM, WAV, MP3)
     // ==========================================
-    async function encodeToWebM(pcmData, originalSampleRate, channels, sampleRate, bitrate) {
-      return new Promise((resolve) => {
-        const ctx = new AudioContext({ sampleRate: sampleRate });
-        const audioBuffer = ctx.createBuffer(1, pcmData.length, originalSampleRate);
-        audioBuffer.getChannelData(0).set(pcmData);
+    
+    // オフラインコンテキストを使ったリサンプリング
+    async function resampleAudio(pcmData, originalSampleRate, targetSampleRate, targetChannels) {
+      const offlineCtx = new OfflineAudioContext(targetChannels, Math.ceil(pcmData.length * targetSampleRate / originalSampleRate), targetSampleRate);
+      const audioBuffer = offlineCtx.createBuffer(1, pcmData.length, originalSampleRate);
+      audioBuffer.getChannelData(0).set(pcmData);
 
+      const source = offlineCtx.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(offlineCtx.destination);
+      source.start();
+
+      return await offlineCtx.startRendering();
+    }
+
+    async function encodeToWebM(pcmData, originalSampleRate, channels, sampleRate, bitrate) {
+      return new Promise(async (resolve) => {
+        const audioBuffer = await resampleAudio(pcmData, originalSampleRate, sampleRate, channels);
+        const ctx = new AudioContext({ sampleRate: sampleRate });
+        
         const dest = ctx.createMediaStreamDestination();
         dest.channelCount = channels;
 
@@ -314,6 +431,98 @@
         source.start();
         source.onended = () => recorder.stop();
       });
+    }
+
+    async function encodeToWav(pcmData, originalSampleRate, channels, sampleRate) {
+      const audioBuffer = await resampleAudio(pcmData, originalSampleRate, sampleRate, channels);
+      const numChannels = audioBuffer.numberOfChannels;
+      const bitDepth = 16;
+      
+      let samples;
+      if (numChannels === 2) {
+        const left = audioBuffer.getChannelData(0);
+        const right = audioBuffer.getChannelData(1);
+        samples = new Float32Array(left.length + right.length);
+        for (let i = 0; i < left.length; i++) {
+          samples[i * 2] = left[i];
+          samples[i * 2 + 1] = right[i];
+        }
+      } else {
+        samples = audioBuffer.getChannelData(0);
+      }
+      
+      const buffer = new ArrayBuffer(44 + samples.length * 2);
+      const view = new DataView(buffer);
+      
+      const writeString = (v, offset, string) => {
+        for (let i = 0; i < string.length; i++) v.setUint8(offset + i, string.charCodeAt(i));
+      };
+      
+      writeString(view, 0, 'RIFF');
+      view.setUint32(4, 36 + samples.length * 2, true);
+      writeString(view, 8, 'WAVE');
+      writeString(view, 12, 'fmt ');
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true); // PCM
+      view.setUint16(22, numChannels, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, sampleRate * numChannels * 2, true);
+      view.setUint16(32, numChannels * 2, true);
+      view.setUint16(34, bitDepth, true);
+      writeString(view, 36, 'data');
+      view.setUint32(40, samples.length * 2, true);
+      
+      let offset = 44;
+      for (let i = 0; i < samples.length; i++, offset += 2) {
+        let s = Math.max(-1, Math.min(1, samples[i]));
+        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+      }
+      
+      return new Blob([view], { type: 'audio/wav' });
+    }
+
+    async function encodeToMp3(pcmData, originalSampleRate, channels, sampleRate, bitrate) {
+      if (typeof lamejs === 'undefined') {
+        throw new Error("lamejsライブラリが読み込まれていません。ネットワークを確認してください。");
+      }
+      
+      const audioBuffer = await resampleAudio(pcmData, originalSampleRate, sampleRate, channels);
+      const numChannels = audioBuffer.numberOfChannels;
+      
+      const mp3encoder = new lamejs.Mp3Encoder(numChannels, sampleRate, Math.round(bitrate / 1000));
+      const mp3Data = [];
+      const sampleBlockSize = 1152;
+      
+      const left = audioBuffer.getChannelData(0);
+      const right = numChannels === 2 ? audioBuffer.getChannelData(1) : left;
+      
+      const leftInt16 = new Int16Array(left.length);
+      const rightInt16 = new Int16Array(right.length);
+      
+      for (let i = 0; i < left.length; i++) {
+        let sL = Math.max(-1, Math.min(1, left[i]));
+        leftInt16[i] = sL < 0 ? sL * 0x8000 : sL * 0x7FFF;
+        if (numChannels === 2) {
+          let sR = Math.max(-1, Math.min(1, right[i]));
+          rightInt16[i] = sR < 0 ? sR * 0x8000 : sR * 0x7FFF;
+        }
+      }
+
+      for (let i = 0; i < leftInt16.length; i += sampleBlockSize) {
+        const leftChunk = leftInt16.subarray(i, i + sampleBlockSize);
+        const rightChunk = numChannels === 2 ? rightInt16.subarray(i, i + sampleBlockSize) : leftChunk;
+        
+        const mp3buf = numChannels === 2 
+          ? mp3encoder.encodeBuffer(leftChunk, rightChunk) 
+          : mp3encoder.encodeBuffer(leftChunk);
+          
+        if (mp3buf.length > 0) mp3Data.push(mp3buf);
+      }
+
+      const mp3buf = mp3encoder.flush();
+      if (mp3buf.length > 0) mp3Data.push(mp3buf);
+
+      return new Blob(mp3Data, { type: 'audio/mp3' });
     }
   </script>
 </body>
