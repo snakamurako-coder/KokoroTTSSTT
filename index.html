@@ -2,60 +2,239 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>Kokoro TTS Studio (ダウンロード進捗対応)</title>
+  <title>Kokoro TTS Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; background-color: #f9f9f9;}
-    .container { background-color: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    h2 { margin-top: 0; color: #333; }
-    .control-group { margin-bottom: 15px; }
-    label { font-size: 0.9em; font-weight: bold; color: #555; }
-    select, textarea, button { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 1em; }
-    textarea { height: 120px; resize: vertical; }
+    :root {
+      --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+      --glass-bg: rgba(255, 255, 255, 0.05);
+      --glass-border: rgba(255, 255, 255, 0.1);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #8b5cf6;
+      --primary-hover: #7c3aed;
+      --accent: #ec4899;
+      --danger: #ef4444;
+      --success: #10b981;
+      --input-bg: rgba(0, 0, 0, 0.2);
+    }
     
-    /* ボタンのスタイル */
-    button { color: white; border: none; cursor: pointer; font-weight: bold; transition: background 0.3s; }
-    #downloadBtn { background-color: #ff9800; }
-    #downloadBtn:hover { background-color: #f57c00; }
-    #generateBtn { background-color: #4CAF50; margin-top: 15px;}
-    #generateBtn:hover { background-color: #45a049; }
-    button:disabled { background-color: #cccccc; cursor: not-allowed; }
-
-    /* ダウンロード状況エリア */
-    #setupArea { background-color: #fff3e0; padding: 15px; border-radius: 4px; border: 1px solid #ffcc80; margin-bottom: 20px; }
-    #progressText { margin-top: 10px; font-size: 0.85em; color: #333; font-family: monospace;}
-    progress { width: 100%; height: 20px; margin-top: 5px; }
-
-    #status { margin-top: 10px; font-size: 0.9em; color: #d32f2f; font-weight: bold; text-align: center; }
-    #resultArea { display: none; margin-top: 20px; padding: 15px; border: 1px solid #4CAF50; border-radius: 4px; background-color: #e8f5e9; }
-    #downloadLink { display: block; text-align: center; background: #2196F3; color: white; padding: 10px; text-decoration: none; border-radius: 4px; margin-top: 15px; font-weight: bold; }
-    #downloadLink:hover { background: #1976d2; }
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      padding: 40px 20px;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+    
+    .container {
+      width: 100%;
+      max-width: 800px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      border-radius: 24px;
+      padding: 40px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      box-sizing: border-box;
+    }
+    
+    h2 {
+      margin-top: 0;
+      font-size: 2.2em;
+      font-weight: 700;
+      background: linear-gradient(to right, #a78bfa, #f472b6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+    
+    .control-group { margin-bottom: 24px; }
+    label { display: block; font-weight: 600; margin-bottom: 8px; color: #e2e8f0; font-size: 0.95em; }
+    
+    input[type="text"], select, textarea {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--input-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 12px;
+      color: var(--text-main);
+      font-family: 'Outfit', sans-serif;
+      font-size: 1em;
+      transition: all 0.3s ease;
+      box-sizing: border-box;
+    }
+    
+    input[type="text"]:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3);
+    }
+    
+    select option { background: #1e293b; color: #fff; }
+    
+    button {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1em;
+      font-weight: 600;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    
+    button:active { transform: scale(0.98); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+    
+    .btn-primary { background: linear-gradient(135deg, var(--primary), var(--accent)); }
+    .btn-primary:hover:not(:disabled) { box-shadow: 0 0 15px rgba(236, 72, 153, 0.5); }
+    
+    .btn-secondary { background: rgba(255, 255, 255, 0.1); border: 1px solid var(--glass-border); }
+    .btn-secondary:hover:not(:disabled) { background: rgba(255, 255, 255, 0.2); }
+    
+    .btn-danger { background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.3); color: #fca5a5; }
+    .btn-danger:hover:not(:disabled) { background: rgba(239, 68, 68, 0.4); color: #fff; }
+    
+    /* Setup Area */
+    #setupArea {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 24px;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    
+    progress {
+      width: 100%;
+      height: 8px;
+      border-radius: 4px;
+      margin-top: 16px;
+      -webkit-appearance: none;
+    }
+    progress::-webkit-progress-bar { background: var(--input-bg); border-radius: 4px; }
+    progress::-webkit-progress-value { background: var(--primary); border-radius: 4px; }
+    
+    #progressText { margin-top: 12px; font-size: 0.9em; color: var(--text-muted); }
+    
+    /* Dialogue Blocks */
+    .dialogue-block {
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 16px;
+      transition: all 0.3s ease;
+    }
+    .dialogue-block:hover { border-color: rgba(255, 255, 255, 0.2); }
+    
+    .block-controls { display: flex; gap: 10px; margin-bottom: 12px; align-items: center; flex-wrap: wrap; justify-content: space-between; }
+    .block-speaker-group { display: flex; gap: 10px; flex: 1; min-width: 200px; }
+    .block-btn-group { display: flex; gap: 8px; }
+    
+    .block-speaker-name { width: 140px !important; }
+    .block-text { height: 80px; resize: vertical; margin-top: 4px; }
+    
+    #addBlockBtn {
+      width: 100%;
+      background: transparent;
+      border: 2px dashed rgba(255, 255, 255, 0.2);
+      color: var(--text-muted);
+      padding: 16px;
+    }
+    #addBlockBtn:hover {
+      border-color: var(--primary);
+      color: var(--text-main);
+      background: rgba(139, 92, 246, 0.1);
+    }
+    
+    /* Utility */
+    .hint { font-size: 0.85em; color: var(--text-muted); margin-bottom: 12px; line-height: 1.5; }
+    .warning { color: #fbbf24; }
+    
+    /* Advanced Settings */
+    .advanced-toggle {
+      display: inline-flex; align-items: center; gap: 8px;
+      cursor: pointer; color: var(--text-muted); font-size: 0.9em;
+      user-select: none; transition: color 0.3s;
+    }
+    .advanced-toggle:hover { color: var(--text-main); }
+    
+    #advancedSettings {
+      background: rgba(0, 0, 0, 0.15); border-radius: 12px; padding: 16px;
+      margin-top: 12px; border: 1px solid var(--glass-border);
+    }
+    
+    .flex-row { display: flex; gap: 16px; flex-wrap: wrap; }
+    .flex-row > div { flex: 1; min-width: 120px; }
+    
+    /* Range Slider */
+    input[type=range] {
+      -webkit-appearance: none; width: 100%; background: transparent; margin: 12px 0;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%;
+      background: var(--accent); cursor: pointer; margin-top: -8px; box-shadow: 0 0 10px var(--accent);
+    }
+    input[type=range]::-webkit-slider-runnable-track {
+      width: 100%; height: 6px; cursor: pointer; background: rgba(255,255,255,0.1); border-radius: 4px;
+    }
+    
+    #status {
+      text-align: center; font-weight: 600; margin-top: 24px; min-height: 24px; color: var(--accent);
+    }
+    
+    /* Result Area */
+    #resultArea {
+      margin-top: 24px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3);
+      border-radius: 16px; padding: 24px; display: none; text-align: center;
+    }
+    audio { width: 100%; margin: 16px 0; height: 40px; border-radius: 20px; outline: none; }
+    audio::-webkit-media-controls-panel { background: var(--glass-bg); }
+    audio::-webkit-media-controls-current-time-display,
+    audio::-webkit-media-controls-time-remaining-display { color: var(--text-main); }
+    
+    #downloadLink {
+      display: block; width: 100%; text-decoration: none; text-align: center;
+      background: linear-gradient(135deg, var(--primary), var(--accent)); color: white; padding: 14px; border-radius: 12px;
+      font-weight: 600; transition: all 0.3s ease; margin-bottom: 12px; box-sizing: border-box;
+    }
+    #downloadLink:hover { box-shadow: 0 0 15px rgba(236, 72, 153, 0.5); transform: translateY(-2px); }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
 </head>
 <body>
   <div class="container">
-    <h2>スピーチ音声 ジェネレーター</h2>
+    <h2>✨ Kokoro Studio</h2>
 
-    <!-- ① AIモデルのダウンロードエリア -->
     <div id="setupArea">
-      <p style="margin-top: 0; font-size: 0.9em;">最初にAIモデル(約80MB)をブラウザにダウンロードします。</p>
-      <button id="downloadBtn">AIモデルをダウンロード</button>
+      <p style="margin-top: 0;">高品質なAI音声モデル(約80MB)をブラウザにロードします</p>
+      <button id="downloadBtn" class="btn-primary">AIモデルをロード</button>
       <progress id="progressBar" value="0" max="100" style="display: none;"></progress>
       <div id="progressText"></div>
     </div>
     
     <div class="control-group" id="dialogueEditorGroup">
       <label>対話エディター</label>
-      <p style="font-size: 0.8em; color: #666; margin: 2px 0 5px 0;">
-        各入力欄ごとに話者を指定できます。「カーソル位置で分割」を押すと、カーソル以降の文章を次の入力欄に分けられます。<br>
-        <span style="color: #ff9800; font-weight: bold;">※ 現在のブラウザ版ONNXモデルは英語のみ対応です。テキストは英語で入力してください。</span><br>
-        <span style="color: #d32f2f; font-weight: bold;">※ 生成される対話音声は、自動的に上から順につながって1つのファイルになります。</span>
-      </p>
+      <div class="hint">
+        各入力欄ごとに話者を設定できます。「分割」を押すとカーソル位置で新しいブロックを作ります。<br>
+        <span class="warning">※ 現在のブラウザ版ONNXモデルは英語専用です。英文を入力してください。</span>
+      </div>
       
-      <!-- 入力欄がここに追加されます -->
       <div id="dialogueContainer"></div>
       
-      <button id="addBlockBtn" style="background-color: #2196F3; margin-top: 5px; width: 100%; padding: 10px; border-radius: 4px; color: white; border: none; font-weight: bold; cursor: pointer;">+ 新しい入力欄を追加</button>
+      <button id="addBlockBtn">+ 新しい入力欄を追加</button>
     </div>
 
     <div class="control-group">
@@ -67,67 +246,58 @@
       </select>
     </div>
 
-    <!-- パラメーター調整（簡易版と詳細版を切り替え） -->
-    <div style="margin-bottom: 10px;">
-      <label style="cursor: pointer; display: inline-flex; align-items: center; color: #2196F3;">
-        <input type="checkbox" id="toggleAdvanced" style="width: auto; margin: 0 8px 0 0;">
-        詳細設定（パラメーター調整）を表示
+    <div style="margin-bottom: 24px;">
+      <label class="advanced-toggle">
+        <input type="checkbox" id="toggleAdvanced" style="width: auto; margin: 0;">
+        詳細パラメーターを表示
       </label>
-    </div>
-
-    <!-- 音質設定（初期状態では非表示） -->
-    <div id="advancedSettings" style="display: none; flex-direction: column; gap: 10px; margin-bottom: 15px;">
       
-      <!-- 読み上げパラメーター -->
-      <div style="display: flex; gap: 10px;">
-        <div class="control-group" style="flex: 1; margin-bottom: 0;">
-          <label>読み上げ速度: <span id="speedDisplay">1.0</span>x</label>
-          <input type="range" id="speechSpeed" min="0.5" max="2.0" step="0.1" value="1.0" style="width: 100%; margin-top: 8px;">
+      <div id="advancedSettings" style="display: none; flex-direction: column; gap: 16px;">
+        <div>
+          <label style="margin-bottom: 0;">読み上げ速度: <span id="speedDisplay" style="color: var(--accent);">1.0</span>x</label>
+          <input type="range" id="speechSpeed" min="0.5" max="2.0" step="0.1" value="1.0">
         </div>
-      </div>
 
-      <!-- 出力品質パラメーター -->
-      <div style="display: flex; gap: 10px;">
-        <div class="control-group" style="flex: 1; margin-bottom: 0;">
-          <label>チャンネル</label>
-          <select id="channel">
-            <option value="1">モノラル</option>
-            <option value="2">ステレオ</option>
-          </select>
-        </div>
-        <div class="control-group" style="flex: 1; margin-bottom: 0;">
-          <label>サンプルレート</label>
-          <select id="sampleRate">
-            <option value="24000">24kHz</option>
-            <option value="16000">16kHz</option>
-          </select>
-        </div>
-        <div class="control-group" style="flex: 1; margin-bottom: 0;">
-          <label>ビットレート (WebM/MP3)</label>
-          <select id="bitrate">
-            <option value="64000">64 kbps</option>
-            <option value="128000">128 kbps</option>
-            <option value="192000">192 kbps</option>
-          </select>
+        <div class="flex-row">
+          <div>
+            <label>チャンネル</label>
+            <select id="channel">
+              <option value="1">モノラル</option>
+              <option value="2">ステレオ</option>
+            </select>
+          </div>
+          <div>
+            <label>サンプルレート</label>
+            <select id="sampleRate">
+              <option value="24000">24kHz</option>
+              <option value="16000">16kHz</option>
+            </select>
+          </div>
+          <div>
+            <label>ビットレート</label>
+            <select id="bitrate">
+              <option value="64000">64 kbps</option>
+              <option value="128000">128 kbps</option>
+              <option value="192000">192 kbps</option>
+            </select>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- ② 生成ボタン (初期状態では無効化) -->
-    <button id="generateBtn" disabled>音声を生成 (プレビュー＆ダウンロード)</button>
-    <p id="status"></p>
+    <button id="generateBtn" class="btn-primary" style="width: 100%; font-size: 1.1em; padding: 16px;" disabled>音声を生成する</button>
+    <div id="status"></div>
 
-    <!-- 結果表示エリア -->
     <div id="resultArea">
-      <p style="margin-top: 0; font-weight: bold; color: #333;">プレビュー再生:</p>
-      <audio id="audioPlayer" controls style="width: 100%;"></audio>
-      <div style="display: flex; gap: 10px; margin-top: 15px;">
-        <a id="downloadLink" href="#" download="speech.webm" style="flex: 1; text-align: center; background: #2196F3; color: white; padding: 10px; text-decoration: none; border-radius: 4px; font-weight: bold;">
-          この音声をダウンロード (.webm)
+      <h3 style="margin-top: 0; margin-bottom: 16px; color: #fff;">🎉 生成完了！</h3>
+      <audio id="audioPlayer" controls></audio>
+      <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+        <a id="downloadLink" href="#" download="speech.webm" style="flex: 1; min-width: 200px;">
+          パソコンに保存
         </a>
-        <button id="saveDriveBtn" style="flex: 1; background-color: #009688; margin-top: 0;">Googleドライブに保存</button>
+        <button id="saveDriveBtn" class="btn-secondary" style="flex: 1; min-width: 200px; padding: 14px; margin-bottom: 12px;">Google Driveに保存</button>
       </div>
-      <p id="driveStatus" style="font-size: 0.85em; text-align: center; margin-top: 10px;"></p>
+      <p id="driveStatus" style="font-size: 0.9em; margin-top: 12px; text-align: center;"></p>
     </div>
   </div>
 
@@ -182,14 +352,14 @@
 
         // ダウンロード完了後のUI変更
         progressText.innerText = '✅ モデルの準備が完了しました！音声を生成できます。';
-        progressText.style.color = 'green';
+        progressText.style.color = 'var(--success)';
         progressBar.style.display = 'none';
         downloadBtn.style.display = 'none';
         generateBtn.disabled = false; // 生成ボタンを有効化
 
       } catch (err) {
         progressText.innerText = 'エラーが発生しました: ' + err.message;
-        progressText.style.color = 'red';
+        progressText.style.color = 'var(--danger)';
         downloadBtn.disabled = false;
         console.error(err);
       }
@@ -226,19 +396,19 @@
       block.style.cssText = 'border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; border-radius: 4px; background-color: #fafafa;';
       
       block.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-          <div style="display: flex; gap: 5px; flex: 1; margin-right: 10px;">
-            <input type="text" class="block-speaker-name" placeholder="話者名 (任意)" value="${speakerName}" style="width: 120px; padding: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
-            <select class="block-voice" style="width: auto; padding: 5px; flex: 1; font-weight: bold; background: #fff; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+        <div class="block-controls">
+          <div class="block-speaker-group">
+            <input type="text" class="block-speaker-name" placeholder="話者名 (任意)" value="${speakerName}">
+            <select class="block-voice">
               ${voiceOptionsHtml}
             </select>
           </div>
-          <div style="display: flex; gap: 5px;">
-            <button class="split-btn" style="background-color: #607d8b; padding: 5px 10px; width: auto; font-size: 0.8em; margin-top: 0; color: white; border: none; border-radius: 4px; cursor: pointer;">カーソル位置で分割</button>
-            <button class="delete-btn" style="background-color: #f44336; padding: 5px 10px; width: auto; font-size: 0.8em; margin-top: 0; color: white; border: none; border-radius: 4px; cursor: pointer;">削除</button>
+          <div class="block-btn-group">
+            <button class="btn-secondary split-btn" style="padding: 8px 12px; font-size: 0.85em;">分割</button>
+            <button class="btn-danger delete-btn" style="padding: 8px 12px; font-size: 0.85em;">削除</button>
           </div>
         </div>
-        <textarea class="block-text" style="height: 60px; margin-top: 5px; width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #ccc; border-radius: 4px; resize: vertical;">${text}</textarea>
+        <textarea class="block-text" placeholder="ここに英語のテキストを入力...">${text}</textarea>
       `;
       
       block.querySelector('.block-voice').value = voiceId;
@@ -408,7 +578,7 @@
       try {
         saveDriveBtn.disabled = true;
         driveStatus.innerText = 'Googleドライブへ保存中... (しばらくお待ちください)';
-        driveStatus.style.color = '#333';
+        driveStatus.style.color = 'var(--text-muted)';
         
         const base64Data = await blobToBase64(currentAudioBlob);
         
@@ -456,13 +626,13 @@
         const result = await response.json();
         if (result.status === 'success') {
           driveStatus.innerHTML = `✅ 保存成功！ <a href="${result.url}" target="_blank">Googleドライブで開く</a>`;
-          driveStatus.style.color = 'green';
+          driveStatus.style.color = 'var(--success)';
         } else {
           throw new Error(result.message || '保存に失敗しました');
         }
       } catch (err) {
         driveStatus.innerText = `❌ エラー: ${err.message}`;
-        driveStatus.style.color = 'red';
+        driveStatus.style.color = 'var(--danger)';
         saveDriveBtn.disabled = false;
       }
     });
