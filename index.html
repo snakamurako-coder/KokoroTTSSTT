@@ -44,45 +44,27 @@
       <div id="progressText"></div>
     </div>
     
-    <div class="control-group">
-      <label>テキスト (複数行や対話に対応)</label>
+    <div class="control-group" id="dialogueEditorGroup">
+      <label>対話エディター</label>
       <p style="font-size: 0.8em; color: #666; margin: 2px 0 5px 0;">
-        行頭に <code>US_F1:</code> のように書くと、行ごとに話者を切り替えられます。<br>
-        【利用可能タグ】 <code>US_F1</code>(米・女), <code>US_F2</code>(米・女/高め), <code>US_M1</code>(米・男), <code>US_M2</code>(米・男/低め), <code>UK_F</code>(英・女), <code>UK_M</code>(英・男)<br>
-        <span style="color: #d32f2f; font-weight: bold;">※ 生成される対話音声は、自動的に1つのファイルにまとまってダウンロードできます。</span><br>
-        <span style="color: #ff9800; font-weight: bold;">※ 現在のブラウザ版ONNXモデルは英語のみ収録されています。テキストは英語で入力してください。</span>
+        各入力欄ごとに話者を指定できます。「カーソル位置で分割」を押すと、カーソル以降の文章を次の入力欄に分けられます。<br>
+        <span style="color: #ff9800; font-weight: bold;">※ 現在のブラウザ版ONNXモデルは英語のみ対応です。テキストは英語で入力してください。</span><br>
+        <span style="color: #d32f2f; font-weight: bold;">※ 生成される対話音声は、自動的に上から順につながって1つのファイルになります。</span>
       </p>
-      <textarea id="inputText" style="height: 150px;">
-US_F1: Hello! This is a demonstration of the dialogue feature.
-US_F2: Hi there! I'm another female voice with a slightly different tone.
-US_M1: It sounds great! I'm the standard American male voice.
-US_M2: And I have a deeper voice. How does this sound?
-UK_F: I am the British female voice. It's lovely to meet you all.
-UK_M: Quite right! The British male voice here, ready to go.
-      </textarea>
+      
+      <!-- 入力欄がここに追加されます -->
+      <div id="dialogueContainer"></div>
+      
+      <button id="addBlockBtn" style="background-color: #2196F3; margin-top: 5px; width: 100%; padding: 10px; border-radius: 4px; color: white; border: none; font-weight: bold; cursor: pointer;">+ 新しい入力欄を追加</button>
     </div>
 
-    <div style="display: flex; gap: 10px;">
-      <div class="control-group" style="flex: 1;">
-        <label>デフォルトの言語・音声モデル</label>
-        <select id="voiceModel">
-          <option value="af_heart">英語 (米国・女性1) - US_F1</option>
-          <option value="af_sky">英語 (米国・女性2/高め) - US_F2</option>
-          <option value="am_adam">英語 (米国・男性1) - US_M1</option>
-          <option value="am_onyx">英語 (米国・男性2/低め) - US_M2</option>
-          <option value="bf_emma">英語 (英国・女性) - UK_F</option>
-          <option value="bm_george">英語 (英国・男性) - UK_M</option>
-        </select>
-      </div>
-
-      <div class="control-group" style="flex: 1;">
-        <label>出力フォーマット</label>
-        <select id="outputFormat">
-          <option value="webm">WebM (標準・軽量)</option>
-          <option value="wav">WAV (高音質・非圧縮)</option>
-          <option value="mp3">MP3 (汎用)</option>
-        </select>
-      </div>
+    <div class="control-group">
+      <label>出力フォーマット</label>
+      <select id="outputFormat">
+        <option value="webm">WebM (標準・軽量)</option>
+        <option value="wav">WAV (高音質・非圧縮)</option>
+        <option value="mp3">MP3 (汎用)</option>
+      </select>
     </div>
 
     <!-- パラメーター調整（簡易版と詳細版を切り替え） -->
@@ -94,28 +76,40 @@ UK_M: Quite right! The British male voice here, ready to go.
     </div>
 
     <!-- 音質設定（初期状態では非表示） -->
-    <div id="advancedSettings" style="display: none; gap: 10px; margin-bottom: 15px;">
-      <div class="control-group" style="flex: 1; margin-bottom: 0;">
-        <label>チャンネル</label>
-        <select id="channel">
-          <option value="1">モノラル</option>
-          <option value="2">ステレオ</option>
-        </select>
+    <div id="advancedSettings" style="display: none; flex-direction: column; gap: 10px; margin-bottom: 15px;">
+      
+      <!-- 読み上げパラメーター -->
+      <div style="display: flex; gap: 10px;">
+        <div class="control-group" style="flex: 1; margin-bottom: 0;">
+          <label>読み上げ速度: <span id="speedDisplay">1.0</span>x</label>
+          <input type="range" id="speechSpeed" min="0.5" max="2.0" step="0.1" value="1.0" style="width: 100%; margin-top: 8px;">
+        </div>
       </div>
-      <div class="control-group" style="flex: 1; margin-bottom: 0;">
-        <label>サンプルレート</label>
-        <select id="sampleRate">
-          <option value="24000">24kHz</option>
-          <option value="16000">16kHz</option>
-        </select>
-      </div>
-      <div class="control-group" style="flex: 1; margin-bottom: 0;">
-        <label>ビットレート (WebM/MP3)</label>
-        <select id="bitrate">
-          <option value="64000">64 kbps</option>
-          <option value="128000">128 kbps</option>
-          <option value="192000">192 kbps</option>
-        </select>
+
+      <!-- 出力品質パラメーター -->
+      <div style="display: flex; gap: 10px;">
+        <div class="control-group" style="flex: 1; margin-bottom: 0;">
+          <label>チャンネル</label>
+          <select id="channel">
+            <option value="1">モノラル</option>
+            <option value="2">ステレオ</option>
+          </select>
+        </div>
+        <div class="control-group" style="flex: 1; margin-bottom: 0;">
+          <label>サンプルレート</label>
+          <select id="sampleRate">
+            <option value="24000">24kHz</option>
+            <option value="16000">16kHz</option>
+          </select>
+        </div>
+        <div class="control-group" style="flex: 1; margin-bottom: 0;">
+          <label>ビットレート (WebM/MP3)</label>
+          <select id="bitrate">
+            <option value="64000">64 kbps</option>
+            <option value="128000">128 kbps</option>
+            <option value="192000">192 kbps</option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -208,55 +202,122 @@ UK_M: Quite right! The British male voice here, ready to go.
       advancedSettings.style.display = e.target.checked ? 'flex' : 'none';
     });
 
-    const voiceMap = {
-      'US_F1': 'af_heart',
-      'US_F2': 'af_sky',
-      'US_M1': 'am_adam',
-      'US_M2': 'am_onyx',
-      'UK_F':  'bf_emma',
-      'UK_M':  'bm_george'
-    };
+    // 読み上げ速度スライダーの表示更新
+    const speechSpeed = document.getElementById('speechSpeed');
+    const speedDisplay = document.getElementById('speedDisplay');
+    speechSpeed.addEventListener('input', (e) => {
+      speedDisplay.innerText = Number(e.target.value).toFixed(1);
+    });
+
+    // 対話ブロックのUI生成ロジック
+    const dialogueContainer = document.getElementById('dialogueContainer');
+    const voiceOptionsHtml = `
+      <option value="af_heart">米国・女性1 (US_F1)</option>
+      <option value="af_sky">米国・女性2 (US_F2・高め)</option>
+      <option value="am_adam">米国・男性1 (US_M1)</option>
+      <option value="am_onyx">米国・男性2 (US_M2・低め)</option>
+      <option value="bf_emma">英国・女性 (UK_F)</option>
+      <option value="bm_george">英国・男性 (UK_M)</option>
+    `;
+
+    function createDialogueBlock(text = '', voiceId = 'af_heart') {
+      const block = document.createElement('div');
+      block.className = 'dialogue-block';
+      block.style.cssText = 'border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; border-radius: 4px; background-color: #fafafa;';
+      
+      block.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+          <select class="block-voice" style="width: auto; padding: 5px; flex: 1; margin-right: 10px; font-weight: bold; background: #fff; border: 1px solid #ccc; border-radius: 4px;">
+            ${voiceOptionsHtml}
+          </select>
+          <div style="display: flex; gap: 5px;">
+            <button class="split-btn" style="background-color: #607d8b; padding: 5px 10px; width: auto; font-size: 0.8em; margin-top: 0; color: white; border: none; border-radius: 4px; cursor: pointer;">カーソル位置で分割</button>
+            <button class="delete-btn" style="background-color: #f44336; padding: 5px 10px; width: auto; font-size: 0.8em; margin-top: 0; color: white; border: none; border-radius: 4px; cursor: pointer;">削除</button>
+          </div>
+        </div>
+        <textarea class="block-text" style="height: 60px; margin-top: 5px; width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #ccc; border-radius: 4px; resize: vertical;">${text}</textarea>
+      `;
+      
+      block.querySelector('.block-voice').value = voiceId;
+      
+      block.querySelector('.delete-btn').addEventListener('click', () => {
+        if (document.querySelectorAll('.dialogue-block').length > 1) {
+          block.remove();
+        } else {
+          alert("最低1つのブロックが必要です。");
+        }
+      });
+
+      block.querySelector('.split-btn').addEventListener('click', () => {
+        const textarea = block.querySelector('.block-text');
+        const cursorPos = textarea.selectionStart;
+        const textAll = textarea.value;
+        
+        if (cursorPos === undefined || cursorPos === textAll.length) {
+          const newBlock = createDialogueBlock('', voiceId);
+          block.after(newBlock);
+        } else {
+          const textBefore = textAll.substring(0, cursorPos);
+          const textAfter = textAll.substring(cursorPos);
+          textarea.value = textBefore;
+          const newBlock = createDialogueBlock(textAfter.trim(), voiceId);
+          block.after(newBlock);
+        }
+      });
+
+      return block;
+    }
+
+    document.getElementById('addBlockBtn').addEventListener('click', () => {
+      dialogueContainer.appendChild(createDialogueBlock());
+    });
+
+    // 初期データの挿入
+    dialogueContainer.appendChild(createDialogueBlock("Hello! This is a demonstration of the dialogue feature.", "af_heart"));
+    dialogueContainer.appendChild(createDialogueBlock("Hi there! I'm another female voice with a slightly different tone.", "af_sky"));
+    dialogueContainer.appendChild(createDialogueBlock("It sounds great! I'm the standard American male voice.", "am_adam"));
+    dialogueContainer.appendChild(createDialogueBlock("And I have a deeper voice. How does this sound?", "am_onyx"));
 
     // ==========================================
     // 2. 音声の生成処理
     // ==========================================
     generateBtn.addEventListener('click', async () => {
-      const text = document.getElementById('inputText').value;
-      if (!text || !synthesizer) return;
+      const blocks = document.querySelectorAll('.dialogue-block');
+      if (blocks.length === 0 || !synthesizer) return;
 
       try {
         generateBtn.disabled = true;
         resultArea.style.display = 'none';
         
-        const defaultVoiceId = document.getElementById('voiceModel').value;
-        const lines = text.split('\n');
         let combinedAudio = [];
         let originalSampleRate = null;
+        const speedParam = parseFloat(document.getElementById('speechSpeed').value);
 
-        for (let i = 0; i < lines.length; i++) {
-          let line = lines[i].trim();
-          if (!line) continue;
+        for (let b = 0; b < blocks.length; b++) {
+          const block = blocks[b];
+          const voiceId = block.querySelector('.block-voice').value;
+          const blockText = block.querySelector('.block-text').value.trim();
           
-          let voiceId = defaultVoiceId;
+          if (!blockText) continue;
           
-          // [US_F1]: または US_F1: のようなタグを検出
-          const match = line.match(/^\[?(US_F1|US_F2|US_M1|US_M2|UK_F|UK_M)\]?[:：]\s*(.*)/i);
-          if (match) {
-            const voiceKey = match[1].toUpperCase();
-            voiceId = voiceMap[voiceKey] || defaultVoiceId;
-            line = match[2].trim();
+          const lines = blockText.split('\n');
+          for (let i = 0; i < lines.length; i++) {
+            let line = lines[i].trim();
+            if (!line) continue;
+            
+            // 旧バージョンのタグが残っていれば除去
+            line = line.replace(/^\[?(US_F1|US_F2|US_M1|US_M2|UK_F|UK_M)\]?[:：]\s*/i, '');
+            if (!line) continue;
+            
+            statusText.innerText = `音声生成中... (ブロック ${b + 1}/${blocks.length}, 行 ${i + 1}/${lines.length})`;
+            
+            const result = await synthesizer.generate(line, { voice: voiceId, speed: speedParam });
+            
+            if (!originalSampleRate) {
+              originalSampleRate = result.sampling_rate;
+            }
+            combinedAudio.push(result.audio);
           }
-          
-          if (!line) continue;
-          
-          statusText.innerText = `音声生成中... (${i + 1}/${lines.length}行目)`;
-          
-          const result = await synthesizer.generate(line, { voice: voiceId });
-          
-          if (!originalSampleRate) {
-            originalSampleRate = result.sampling_rate;
-          }
-          combinedAudio.push(result.audio);
         }
 
         if (combinedAudio.length === 0) {
@@ -345,17 +406,31 @@ UK_M: Quite right! The British male voice here, ready to go.
         
         const base64Data = await blobToBase64(currentAudioBlob);
         
-        const text = document.getElementById('inputText').value;
-        const voiceModel = document.getElementById('voiceModel').options[document.getElementById('voiceModel').selectedIndex].text;
+        // 結合されたテキストと設定情報を構築
+        const blocks = document.querySelectorAll('.dialogue-block');
+        let fullText = "";
+        let usedVoices = new Set();
+        blocks.forEach((b, index) => {
+           const select = b.querySelector('.block-voice');
+           const v = select.options[select.selectedIndex].text.split(' ')[0]; // 短くするため最初の部分だけ
+           const t = b.querySelector('.block-text').value.trim();
+           if(t) {
+             fullText += `[B${index+1}: ${v}] ${t}\n`;
+             usedVoices.add(v);
+           }
+        });
+
+        const voiceModel = Array.from(usedVoices).join(", ");
+        const speed = document.getElementById('speechSpeed').value;
         const channel = document.getElementById('channel').options[document.getElementById('channel').selectedIndex].text;
         const sampleRate = document.getElementById('sampleRate').options[document.getElementById('sampleRate').selectedIndex].text;
         const bitrate = document.getElementById('bitrate').options[document.getElementById('bitrate').selectedIndex].text;
         const outputFormat = document.getElementById('outputFormat').value;
         
         const payload = {
-          text: text,
+          text: fullText,
           voiceModel: voiceModel,
-          settings: `チャンネル: ${channel}, サンプルレート: ${sampleRate}, ビットレート: ${bitrate}`,
+          settings: `速度: ${speed}x, チャンネル: ${channel}, サンプルレート: ${sampleRate}, ビットレート: ${bitrate}`,
           audioBase64: base64Data,
           format: outputFormat
         };
