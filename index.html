@@ -2,23 +2,52 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>Kokoro TTS Studio</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>TTS Studio - Kokoro / Piper / ブラウザTTS</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
   <style>
+    /* ===== CSS Custom Properties (Theme System) ===== */
     :root {
       --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
       --glass-bg: rgba(255, 255, 255, 0.05);
       --glass-border: rgba(255, 255, 255, 0.1);
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
-      --primary: #8b5cf6;
-      --primary-hover: #7c3aed;
-      --accent: #ec4899;
       --danger: #ef4444;
       --success: #10b981;
       --input-bg: rgba(0, 0, 0, 0.2);
+
+      /* Kokoro theme (purple/pink) */
+      --kokoro-primary: #8b5cf6;
+      --kokoro-primary-hover: #7c3aed;
+      --kokoro-accent: #ec4899;
+      --kokoro-gradient: linear-gradient(to right, #a78bfa, #f472b6);
+      --kokoro-btn-gradient: linear-gradient(135deg, #8b5cf6, #ec4899);
+      --kokoro-glow: rgba(236, 72, 153, 0.5);
+      --kokoro-tab-bg: rgba(139, 92, 246, 0.15);
+      --kokoro-tab-border: rgba(139, 92, 246, 0.4);
+
+      /* Piper theme (teal/cyan) */
+      --piper-primary: #14b8a6;
+      --piper-primary-hover: #0d9488;
+      --piper-accent: #06b6d4;
+      --piper-gradient: linear-gradient(to right, #5eead4, #67e8f9);
+      --piper-btn-gradient: linear-gradient(135deg, #14b8a6, #06b6d4);
+      --piper-glow: rgba(6, 182, 212, 0.5);
+      --piper-tab-bg: rgba(20, 184, 166, 0.15);
+      --piper-tab-border: rgba(20, 184, 166, 0.4);
+
+      /* Browser TTS theme (amber/orange) */
+      --browser-primary: #f59e0b;
+      --browser-primary-hover: #d97706;
+      --browser-accent: #f97316;
+      --browser-gradient: linear-gradient(to right, #fcd34d, #fb923c);
+      --browser-btn-gradient: linear-gradient(135deg, #f59e0b, #f97316);
+      --browser-glow: rgba(249, 115, 22, 0.5);
+      --browser-tab-bg: rgba(245, 158, 11, 0.15);
+      --browser-tab-border: rgba(245, 158, 11, 0.4);
     }
     
     body {
@@ -35,7 +64,7 @@
     
     .container {
       width: 100%;
-      max-width: 800px;
+      max-width: 860px;
       background: var(--glass-bg);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
@@ -46,17 +75,72 @@
       box-sizing: border-box;
     }
     
+    /* ===== Tab Navigation ===== */
+    .tab-nav {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 32px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 16px;
+      padding: 6px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.9em;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: transparent;
+      border: 2px solid transparent;
+      border-radius: 12px;
+      padding: 14px 12px;
+      cursor: pointer;
+      transition: all 0.35s ease;
+      box-shadow: none;
+      text-align: center;
+      line-height: 1.3;
+    }
+
+    .tab-btn:hover { color: var(--text-main); background: rgba(255,255,255,0.05); }
+
+    .tab-btn .tab-label { display: block; font-size: 1.05em; }
+    .tab-btn .tab-sub { display: block; font-size: 0.78em; font-weight: 400; margin-top: 4px; opacity: 0.7; }
+
+    .tab-btn.active-kokoro {
+      background: var(--kokoro-tab-bg);
+      border-color: var(--kokoro-tab-border);
+      color: #c4b5fd;
+      box-shadow: 0 0 20px rgba(139, 92, 246, 0.15);
+    }
+    .tab-btn.active-piper {
+      background: var(--piper-tab-bg);
+      border-color: var(--piper-tab-border);
+      color: #99f6e4;
+      box-shadow: 0 0 20px rgba(20, 184, 166, 0.15);
+    }
+    .tab-btn.active-browser {
+      background: var(--browser-tab-bg);
+      border-color: var(--browser-tab-border);
+      color: #fde68a;
+      box-shadow: 0 0 20px rgba(245, 158, 11, 0.15);
+    }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; animation: fadeIn 0.35s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ===== Common Elements ===== */
     h2 {
       margin-top: 0;
       font-size: 2.2em;
       font-weight: 700;
-      background: linear-gradient(to right, #a78bfa, #f472b6);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
       margin-bottom: 30px;
       text-align: center;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
-    
+
     .control-group { margin-bottom: 24px; }
     label { display: block; font-weight: 600; margin-bottom: 8px; color: #e2e8f0; font-size: 0.95em; }
     
@@ -71,12 +155,6 @@
       font-size: 1em;
       transition: all 0.3s ease;
       box-sizing: border-box;
-    }
-    
-    input[type="text"]:focus, select:focus, textarea:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3);
     }
     
     select option { background: #1e293b; color: #fff; }
@@ -97,17 +175,49 @@
     button:active { transform: scale(0.98); }
     button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
     
-    .btn-primary { background: linear-gradient(135deg, var(--primary), var(--accent)); }
-    .btn-primary:hover:not(:disabled) { box-shadow: 0 0 15px rgba(236, 72, 153, 0.5); }
-    
     .btn-secondary { background: rgba(255, 255, 255, 0.1); border: 1px solid var(--glass-border); }
     .btn-secondary:hover:not(:disabled) { background: rgba(255, 255, 255, 0.2); }
     
     .btn-danger { background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.3); color: #fca5a5; }
     .btn-danger:hover:not(:disabled) { background: rgba(239, 68, 68, 0.4); color: #fff; }
-    
-    /* Setup Area */
-    #setupArea {
+
+    /* ===== Themed Primary Buttons ===== */
+    .btn-kokoro { background: var(--kokoro-btn-gradient); }
+    .btn-kokoro:hover:not(:disabled) { box-shadow: 0 0 15px var(--kokoro-glow); }
+
+    .btn-piper { background: var(--piper-btn-gradient); }
+    .btn-piper:hover:not(:disabled) { box-shadow: 0 0 15px var(--piper-glow); }
+
+    .btn-browser { background: var(--browser-btn-gradient); }
+    .btn-browser:hover:not(:disabled) { box-shadow: 0 0 15px var(--browser-glow); }
+
+    /* ===== Themed Headings ===== */
+    .heading-kokoro { background: var(--kokoro-gradient); }
+    .heading-piper { background: var(--piper-gradient); }
+    .heading-browser { background: var(--browser-gradient); }
+
+    /* ===== Themed Focus Rings ===== */
+    [data-theme="kokoro"] input[type="text"]:focus,
+    [data-theme="kokoro"] select:focus,
+    [data-theme="kokoro"] textarea:focus {
+      outline: none; border-color: var(--kokoro-primary);
+      box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3);
+    }
+    [data-theme="piper"] input[type="text"]:focus,
+    [data-theme="piper"] select:focus,
+    [data-theme="piper"] textarea:focus {
+      outline: none; border-color: var(--piper-primary);
+      box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.3);
+    }
+    [data-theme="browser"] input[type="text"]:focus,
+    [data-theme="browser"] select:focus,
+    [data-theme="browser"] textarea:focus {
+      outline: none; border-color: var(--browser-primary);
+      box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3);
+    }
+
+    /* ===== Setup Area ===== */
+    .setup-area {
       background: rgba(255, 255, 255, 0.03);
       border: 1px solid var(--glass-border);
       border-radius: 16px;
@@ -124,11 +234,14 @@
       -webkit-appearance: none;
     }
     progress::-webkit-progress-bar { background: var(--input-bg); border-radius: 4px; }
-    progress::-webkit-progress-value { background: var(--primary); border-radius: 4px; }
+
+    [data-theme="kokoro"] progress::-webkit-progress-value { background: var(--kokoro-primary); border-radius: 4px; }
+    [data-theme="piper"] progress::-webkit-progress-value { background: var(--piper-primary); border-radius: 4px; }
+    [data-theme="browser"] progress::-webkit-progress-value { background: var(--browser-primary); border-radius: 4px; }
+
+    .progress-text { margin-top: 12px; font-size: 0.9em; color: var(--text-muted); }
     
-    #progressText { margin-top: 12px; font-size: 0.9em; color: var(--text-muted); }
-    
-    /* Dialogue Blocks */
+    /* ===== Dialogue Blocks ===== */
     .dialogue-block {
       background: rgba(0, 0, 0, 0.2);
       border: 1px solid var(--glass-border);
@@ -146,20 +259,28 @@
     .block-speaker-name { width: 140px !important; }
     .block-text { height: 80px; resize: vertical; margin-top: 4px; }
     
-    #addBlockBtn {
+    .add-block-btn {
       width: 100%;
       background: transparent;
       border: 2px dashed rgba(255, 255, 255, 0.2);
       color: var(--text-muted);
       padding: 16px;
     }
-    #addBlockBtn:hover {
-      border-color: var(--primary);
-      color: var(--text-main);
+
+    [data-theme="kokoro"] .add-block-btn:hover {
+      border-color: var(--kokoro-primary); color: var(--text-main);
       background: rgba(139, 92, 246, 0.1);
     }
+    [data-theme="piper"] .add-block-btn:hover {
+      border-color: var(--piper-primary); color: var(--text-main);
+      background: rgba(20, 184, 166, 0.1);
+    }
+    [data-theme="browser"] .add-block-btn:hover {
+      border-color: var(--browser-primary); color: var(--text-main);
+      background: rgba(245, 158, 11, 0.1);
+    }
     
-    /* Utility */
+    /* ===== Utility ===== */
     .hint { font-size: 0.85em; color: var(--text-muted); margin-bottom: 12px; line-height: 1.5; }
     .warning { color: #fbbf24; }
     
@@ -171,7 +292,7 @@
     }
     .advanced-toggle:hover { color: var(--text-main); }
     
-    #advancedSettings {
+    .advanced-settings {
       background: rgba(0, 0, 0, 0.15); border-radius: 12px; padding: 16px;
       margin-top: 12px; border: 1px solid var(--glass-border);
     }
@@ -183,20 +304,32 @@
     input[type=range] {
       -webkit-appearance: none; width: 100%; background: transparent; margin: 12px 0;
     }
-    input[type=range]::-webkit-slider-thumb {
-      -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%;
-      background: var(--accent); cursor: pointer; margin-top: -8px; box-shadow: 0 0 10px var(--accent);
-    }
     input[type=range]::-webkit-slider-runnable-track {
       width: 100%; height: 6px; cursor: pointer; background: rgba(255,255,255,0.1); border-radius: 4px;
     }
-    
-    #status {
-      text-align: center; font-weight: 600; margin-top: 24px; min-height: 24px; color: var(--accent);
+
+    [data-theme="kokoro"] input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%;
+      background: var(--kokoro-accent); cursor: pointer; margin-top: -8px; box-shadow: 0 0 10px var(--kokoro-accent);
+    }
+    [data-theme="piper"] input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%;
+      background: var(--piper-accent); cursor: pointer; margin-top: -8px; box-shadow: 0 0 10px var(--piper-accent);
+    }
+    [data-theme="browser"] input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%;
+      background: var(--browser-accent); cursor: pointer; margin-top: -8px; box-shadow: 0 0 10px var(--browser-accent);
     }
     
+    .status-text {
+      text-align: center; font-weight: 600; margin-top: 24px; min-height: 24px;
+    }
+    .status-kokoro { color: var(--kokoro-accent); }
+    .status-piper { color: var(--piper-accent); }
+    .status-browser { color: var(--browser-accent); }
+    
     /* Result Area */
-    #resultArea {
+    .result-area {
       margin-top: 24px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3);
       border-radius: 16px; padding: 24px; display: none; text-align: center;
     }
@@ -205,183 +338,601 @@
     audio::-webkit-media-controls-current-time-display,
     audio::-webkit-media-controls-time-remaining-display { color: var(--text-main); }
     
-    #downloadLink {
+    .download-link {
       display: block; width: 100%; text-decoration: none; text-align: center;
-      background: linear-gradient(135deg, var(--primary), var(--accent)); color: white; padding: 14px; border-radius: 12px;
+      color: white; padding: 14px; border-radius: 12px;
       font-weight: 600; transition: all 0.3s ease; margin-bottom: 12px; box-sizing: border-box;
     }
-    #downloadLink:hover { box-shadow: 0 0 15px rgba(236, 72, 153, 0.5); transform: translateY(-2px); }
+    .download-link:hover { transform: translateY(-2px); }
+    .dl-kokoro { background: var(--kokoro-btn-gradient); }
+    .dl-kokoro:hover { box-shadow: 0 0 15px var(--kokoro-glow); }
+    .dl-piper { background: var(--piper-btn-gradient); }
+    .dl-piper:hover { box-shadow: 0 0 15px var(--piper-glow); }
+    .dl-browser { background: var(--browser-btn-gradient); }
+    .dl-browser:hover { box-shadow: 0 0 15px var(--browser-glow); }
+
+    /* ===== Engine Badge ===== */
+    .engine-badge {
+      display: inline-block; font-size: 0.75em; font-weight: 600; padding: 4px 12px;
+      border-radius: 20px; margin-bottom: 16px; letter-spacing: 0.5px;
+    }
+    .badge-kokoro { background: rgba(139,92,246,0.2); color: #c4b5fd; border: 1px solid rgba(139,92,246,0.3); }
+    .badge-piper { background: rgba(20,184,166,0.2); color: #99f6e4; border: 1px solid rgba(20,184,166,0.3); }
+    .badge-browser { background: rgba(245,158,11,0.2); color: #fde68a; border: 1px solid rgba(245,158,11,0.3); }
+
+    /* ===== Piper Server Config ===== */
+    .server-config {
+      display: flex; gap: 10px; align-items: center; margin-bottom: 12px;
+    }
+    .server-config input { flex: 1; }
+    .server-status-dot {
+      width: 10px; height: 10px; border-radius: 50%; display: inline-block;
+      margin-right: 6px; vertical-align: middle;
+    }
+    .dot-offline { background: #ef4444; box-shadow: 0 0 6px rgba(239,68,68,0.5); }
+    .dot-online { background: #10b981; box-shadow: 0 0 6px rgba(16,185,129,0.5); }
+    .dot-checking { background: #f59e0b; box-shadow: 0 0 6px rgba(245,158,11,0.5); animation: pulse 1s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    /* Browser TTS specific */
+    .browser-tts-note {
+      background: rgba(245, 158, 11, 0.08);
+      border: 1px solid rgba(245, 158, 11, 0.2);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 24px;
+      font-size: 0.9em;
+      line-height: 1.6;
+    }
+    .browser-tts-note strong { color: #fde68a; }
+
+    /* ===== Responsive / Mobile ===== */
+
+    /* --- Medium screens (tablets) --- */
+    @media (max-width: 768px) {
+      body {
+        padding: 20px 10px;
+      }
+
+      .container {
+        padding: 24px 18px;
+        border-radius: 18px;
+      }
+
+      h2 {
+        font-size: 1.7em;
+        margin-bottom: 20px;
+      }
+
+      .tab-btn {
+        padding: 10px 8px;
+        font-size: 0.85em;
+      }
+
+      .tab-btn .tab-label {
+        font-size: 0.95em;
+      }
+
+      .tab-btn .tab-sub {
+        font-size: 0.72em;
+      }
+
+      .block-controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .block-speaker-group {
+        flex-direction: column;
+        min-width: 0;
+      }
+
+      .block-speaker-name {
+        width: 100% !important;
+      }
+
+      .flex-row {
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .flex-row > div {
+        min-width: 0;
+      }
+
+      .server-config {
+        flex-direction: column;
+      }
+
+      .server-config button {
+        width: 100%;
+      }
+    }
+
+    /* --- Small screens (phones) --- */
+    @media (max-width: 480px) {
+      body {
+        padding: 8px 4px;
+      }
+
+      .container {
+        padding: 16px 12px;
+        border-radius: 14px;
+        border: none;
+        box-shadow: none;
+      }
+
+      h2 {
+        font-size: 1.4em;
+        margin-bottom: 16px;
+      }
+
+      .tab-nav {
+        gap: 3px;
+        padding: 4px;
+        margin-bottom: 20px;
+        border-radius: 12px;
+      }
+
+      .tab-btn {
+        padding: 10px 4px;
+        font-size: 0.78em;
+        border-radius: 9px;
+        border-width: 1.5px;
+      }
+
+      .tab-btn .tab-label {
+        font-size: 0.88em;
+      }
+
+      .tab-btn .tab-sub {
+        font-size: 0.65em;
+        margin-top: 2px;
+      }
+
+      .engine-badge {
+        font-size: 0.68em;
+        padding: 3px 10px;
+      }
+
+      .setup-area {
+        padding: 16px 12px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+      }
+
+      .setup-area p {
+        font-size: 0.9em;
+      }
+
+      .control-group {
+        margin-bottom: 16px;
+      }
+
+      label {
+        font-size: 0.88em;
+        margin-bottom: 6px;
+      }
+
+      input[type="text"], select, textarea {
+        padding: 10px 12px;
+        font-size: 0.95em;
+        border-radius: 10px;
+      }
+
+      .hint {
+        font-size: 0.8em;
+      }
+
+      .dialogue-block {
+        padding: 12px;
+        border-radius: 12px;
+        margin-bottom: 12px;
+      }
+
+      .block-controls {
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      .block-btn-group {
+        width: 100%;
+        justify-content: flex-end;
+      }
+
+      .block-btn-group button {
+        flex: 1;
+        padding: 10px 8px;
+        font-size: 0.82em;
+      }
+
+      .block-text {
+        height: 70px;
+        font-size: 0.95em;
+      }
+
+      .add-block-btn {
+        padding: 12px;
+        font-size: 0.9em;
+      }
+
+      button {
+        padding: 10px 16px;
+        font-size: 0.95em;
+      }
+
+      .advanced-toggle {
+        font-size: 0.85em;
+      }
+
+      .advanced-settings {
+        padding: 12px;
+      }
+
+      .result-area {
+        padding: 16px 12px;
+        border-radius: 12px;
+      }
+
+      .result-area h3 {
+        font-size: 1em;
+      }
+
+      .result-area > div {
+        flex-direction: column !important;
+      }
+
+      .download-link {
+        padding: 12px;
+        font-size: 0.9em;
+        min-width: 0 !important;
+      }
+
+      .result-area .btn-secondary {
+        min-width: 0 !important;
+      }
+
+      .browser-tts-note {
+        padding: 12px;
+        font-size: 0.84em;
+      }
+
+      .status-text {
+        font-size: 0.88em;
+        margin-top: 16px;
+      }
+
+      audio {
+        height: 36px;
+        margin: 12px 0;
+      }
+
+      /* Range slider - larger thumb for touch */
+      input[type=range]::-webkit-slider-thumb {
+        height: 24px !important;
+        width: 24px !important;
+        margin-top: -10px !important;
+      }
+
+      input[type=range]::-webkit-slider-runnable-track {
+        height: 8px;
+      }
+    }
+
+    /* --- Very small screens (< 360px) --- */
+    @media (max-width: 360px) {
+      .container {
+        padding: 12px 8px;
+      }
+
+      h2 {
+        font-size: 1.2em;
+      }
+
+      .tab-btn .tab-label {
+        font-size: 0.8em;
+      }
+
+      .tab-btn .tab-sub {
+        display: none;
+      }
+    }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
 </head>
 <body>
   <div class="container">
-    <h2>✨ Kokoro Studio</h2>
 
-    <div id="setupArea">
-      <p style="margin-top: 0;">高品質なAI音声モデル(約80MB)をブラウザにロードします</p>
-      <button id="downloadBtn" class="btn-primary">AIモデルをロード</button>
-      <progress id="progressBar" value="0" max="100" style="display: none;"></progress>
-      <div id="progressText"></div>
-    </div>
-    
-    <div class="control-group" id="dialogueEditorGroup">
-      <label>対話エディター</label>
-      <div class="hint">
-        各入力欄ごとに話者を設定できます。「分割」を押すとカーソル位置で新しいブロックを作ります。<br>
-        <span class="warning">※ 現在のブラウザ版ONNXモデルは英語専用です。英文を入力してください。</span>
+    <!-- ===== Tab Navigation ===== -->
+    <nav class="tab-nav">
+      <button class="tab-btn active-kokoro" data-tab="kokoro" id="tabBtnKokoro">
+        <span class="tab-label">🎵 Kokoro</span>
+        <span class="tab-sub">最高品質</span>
+      </button>
+      <button class="tab-btn" data-tab="piper" id="tabBtnPiper">
+        <span class="tab-label">⚡ Piper</span>
+        <span class="tab-sub">即応性×品質</span>
+      </button>
+      <button class="tab-btn" data-tab="browser" id="tabBtnBrowser">
+        <span class="tab-label">🌐 ブラウザTTS</span>
+        <span class="tab-sub">事前準備不要</span>
+      </button>
+    </nav>
+
+    <!-- ================================================================== -->
+    <!--  KOKORO TAB                                                        -->
+    <!-- ================================================================== -->
+    <div class="tab-content active" id="tab-kokoro" data-theme="kokoro">
+      <h2 class="heading-kokoro">✨ Kokoro Studio</h2>
+      <div class="engine-badge badge-kokoro">🏆 最高品質 AI音声合成</div>
+
+      <div class="setup-area" id="kokoroSetupArea">
+        <p style="margin-top: 0;">高品質なAI音声モデル(約80MB)をブラウザにロードします</p>
+        <button id="kokoroDownloadBtn" class="btn-kokoro">AIモデルをロード</button>
+        <progress id="kokoroProgressBar" value="0" max="100" style="display: none;"></progress>
+        <div class="progress-text" id="kokoroProgressText"></div>
       </div>
       
-      <div id="dialogueContainer"></div>
-      
-      <button id="addBlockBtn">+ 新しい入力欄を追加</button>
-    </div>
-
-    <div class="control-group">
-      <label>出力フォーマット</label>
-      <select id="outputFormat">
-        <option value="webm">WebM (標準・軽量)</option>
-        <option value="wav">WAV (高音質・非圧縮)</option>
-        <option value="mp3">MP3 (汎用)</option>
-      </select>
-    </div>
-
-    <div style="margin-bottom: 24px;">
-      <label class="advanced-toggle">
-        <input type="checkbox" id="toggleAdvanced" style="width: auto; margin: 0;">
-        詳細パラメーターを表示
-      </label>
-      
-      <div id="advancedSettings" style="display: none; flex-direction: column; gap: 16px;">
-        <div>
-          <label style="margin-bottom: 0;">読み上げ速度: <span id="speedDisplay" style="color: var(--accent);">1.0</span>x</label>
-          <input type="range" id="speechSpeed" min="0.5" max="2.0" step="0.1" value="1.0">
+      <div class="control-group" id="kokoroDialogueEditorGroup">
+        <label>対話エディター</label>
+        <div class="hint">
+          各入力欄ごとに話者を設定できます。「分割」を押すとカーソル位置で新しいブロックを作ります。<br>
+          <span class="warning">※ 現在のブラウザ版ONNXモデルは英語専用です。英文を入力してください。</span>
         </div>
+        
+        <div id="kokoroDialogueContainer"></div>
+        <button class="add-block-btn" id="kokoroAddBlockBtn">+ 新しい入力欄を追加</button>
+      </div>
 
-        <div class="flex-row">
+      <div class="control-group">
+        <label>出力フォーマット</label>
+        <select id="kokoroOutputFormat">
+          <option value="webm">WebM (標準・軽量)</option>
+          <option value="wav">WAV (高音質・非圧縮)</option>
+          <option value="mp3">MP3 (汎用)</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom: 24px;">
+        <label class="advanced-toggle">
+          <input type="checkbox" id="kokoroToggleAdvanced" style="width: auto; margin: 0;">
+          詳細パラメーターを表示
+        </label>
+        
+        <div id="kokoroAdvancedSettings" class="advanced-settings" style="display: none; flex-direction: column; gap: 16px;">
           <div>
-            <label>チャンネル</label>
-            <select id="channel">
-              <option value="1">モノラル</option>
-              <option value="2">ステレオ</option>
-            </select>
+            <label style="margin-bottom: 0;">読み上げ速度: <span id="kokoroSpeedDisplay" style="color: var(--kokoro-accent);">1.0</span>x</label>
+            <input type="range" id="kokoroSpeechSpeed" min="0.5" max="2.0" step="0.1" value="1.0">
           </div>
-          <div>
-            <label>サンプルレート</label>
-            <select id="sampleRate">
-              <option value="24000">24kHz</option>
-              <option value="16000">16kHz</option>
-            </select>
-          </div>
-          <div>
-            <label>ビットレート</label>
-            <select id="bitrate">
-              <option value="64000">64 kbps</option>
-              <option value="128000">128 kbps</option>
-              <option value="192000">192 kbps</option>
-            </select>
+
+          <div class="flex-row">
+            <div>
+              <label>チャンネル</label>
+              <select id="kokoroChannel">
+                <option value="1">モノラル</option>
+                <option value="2">ステレオ</option>
+              </select>
+            </div>
+            <div>
+              <label>サンプルレート</label>
+              <select id="kokoroSampleRate">
+                <option value="24000">24kHz</option>
+                <option value="16000">16kHz</option>
+              </select>
+            </div>
+            <div>
+              <label>ビットレート</label>
+              <select id="kokoroBitrate">
+                <option value="64000">64 kbps</option>
+                <option value="128000">128 kbps</option>
+                <option value="192000">192 kbps</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <button id="generateBtn" class="btn-primary" style="width: 100%; font-size: 1.1em; padding: 16px;" disabled>音声を生成する</button>
-    <div id="status"></div>
+      <button id="kokoroGenerateBtn" class="btn-kokoro" style="width: 100%; font-size: 1.1em; padding: 16px;" disabled>音声を生成する</button>
+      <div class="status-text status-kokoro" id="kokoroStatus"></div>
 
-    <div id="resultArea">
-      <h3 style="margin-top: 0; margin-bottom: 16px; color: #fff;">🎉 生成完了！</h3>
-      <audio id="audioPlayer" controls></audio>
-      <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-        <a id="downloadLink" href="#" download="speech.webm" style="flex: 1; min-width: 200px;">
-          パソコンに保存
-        </a>
-        <button id="saveDriveBtn" class="btn-secondary" style="flex: 1; min-width: 200px; padding: 14px; margin-bottom: 12px;">Google Driveに保存</button>
+      <div class="result-area" id="kokoroResultArea">
+        <h3 style="margin-top: 0; margin-bottom: 16px; color: #fff;">🎉 生成完了！</h3>
+        <audio id="kokoroAudioPlayer" controls></audio>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+          <a id="kokoroDownloadLink" class="download-link dl-kokoro" href="#" download="speech.webm" style="flex: 1; min-width: 200px;">
+            パソコンに保存
+          </a>
+          <button id="kokoroSaveDriveBtn" class="btn-secondary" style="flex: 1; min-width: 200px; padding: 14px; margin-bottom: 12px;">Google Driveに保存</button>
+        </div>
+        <p id="kokoroDriveStatus" style="font-size: 0.9em; margin-top: 12px; text-align: center;"></p>
       </div>
-      <p id="driveStatus" style="font-size: 0.9em; margin-top: 12px; text-align: center;"></p>
     </div>
-  </div>
 
-  <!-- 最新版の Transformers.js 読み込み (Kokoro対応版) -->
+    <!-- ================================================================== -->
+    <!--  PIPER TAB                                                         -->
+    <!-- ================================================================== -->
+    <div class="tab-content" id="tab-piper" data-theme="piper">
+      <h2 class="heading-piper">⚡ Piper Studio</h2>
+      <div class="engine-badge badge-piper">⚖️ 即応性と品質のバランス</div>
+
+      <div class="setup-area" id="piperSetupArea">
+        <p style="margin-top: 0;">ローカルのPiper TTSサーバーに接続します</p>
+        <div class="server-config">
+          <input type="text" id="piperServerUrl" value="http://localhost:5000" placeholder="Piperサーバー URL">
+          <button id="piperConnectBtn" class="btn-piper" style="white-space: nowrap;">接続テスト</button>
+        </div>
+        <div class="progress-text" id="piperConnectionStatus">
+          <span class="server-status-dot dot-offline"></span> 未接続
+        </div>
+      </div>
+      
+      <div class="control-group" id="piperDialogueEditorGroup">
+        <label>対話エディター</label>
+        <div class="hint">
+          各入力欄ごとに話者を設定できます。「分割」を押すとカーソル位置で新しいブロックを作ります。<br>
+          <span class="warning">※ Piperの音声モデルにより対応言語が異なります。</span>
+        </div>
+        
+        <div id="piperDialogueContainer"></div>
+        <button class="add-block-btn" id="piperAddBlockBtn">+ 新しい入力欄を追加</button>
+      </div>
+
+      <div class="control-group">
+        <label>出力フォーマット</label>
+        <select id="piperOutputFormat">
+          <option value="wav">WAV (高音質・非圧縮)</option>
+          <option value="webm">WebM (標準・軽量)</option>
+          <option value="mp3">MP3 (汎用)</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom: 24px;">
+        <label class="advanced-toggle">
+          <input type="checkbox" id="piperToggleAdvanced" style="width: auto; margin: 0;">
+          詳細パラメーターを表示
+        </label>
+        
+        <div id="piperAdvancedSettings" class="advanced-settings" style="display: none; flex-direction: column; gap: 16px;">
+          <div>
+            <label style="margin-bottom: 0;">読み上げ速度: <span id="piperSpeedDisplay" style="color: var(--piper-accent);">1.0</span>x</label>
+            <input type="range" id="piperSpeechSpeed" min="0.5" max="2.0" step="0.1" value="1.0">
+          </div>
+
+          <div class="flex-row">
+            <div>
+              <label>チャンネル</label>
+              <select id="piperChannel">
+                <option value="1">モノラル</option>
+                <option value="2">ステレオ</option>
+              </select>
+            </div>
+            <div>
+              <label>サンプルレート</label>
+              <select id="piperSampleRate">
+                <option value="22050">22.05kHz</option>
+                <option value="16000">16kHz</option>
+                <option value="24000">24kHz</option>
+              </select>
+            </div>
+            <div>
+              <label>ビットレート</label>
+              <select id="piperBitrate">
+                <option value="64000">64 kbps</option>
+                <option value="128000">128 kbps</option>
+                <option value="192000">192 kbps</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button id="piperGenerateBtn" class="btn-piper" style="width: 100%; font-size: 1.1em; padding: 16px;" disabled>音声を生成する</button>
+      <div class="status-text status-piper" id="piperStatus"></div>
+
+      <div class="result-area" id="piperResultArea">
+        <h3 style="margin-top: 0; margin-bottom: 16px; color: #fff;">🎉 生成完了！</h3>
+        <audio id="piperAudioPlayer" controls></audio>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+          <a id="piperDownloadLink" class="download-link dl-piper" href="#" download="speech.wav" style="flex: 1; min-width: 200px;">
+            パソコンに保存
+          </a>
+          <button id="piperSaveDriveBtn" class="btn-secondary" style="flex: 1; min-width: 200px; padding: 14px; margin-bottom: 12px;">Google Driveに保存</button>
+        </div>
+        <p id="piperDriveStatus" style="font-size: 0.9em; margin-top: 12px; text-align: center;"></p>
+      </div>
+    </div>
+
+    <!-- ================================================================== -->
+    <!--  BROWSER TTS TAB                                                   -->
+    <!-- ================================================================== -->
+    <div class="tab-content" id="tab-browser" data-theme="browser">
+      <h2 class="heading-browser">🌐 ブラウザ TTS</h2>
+      <div class="engine-badge badge-browser">🚀 事前準備不要・即座に利用可能</div>
+
+      <div class="browser-tts-note">
+        <strong>ブラウザTTS</strong>はWeb Speech APIを使用します。<br>
+        モデルのダウンロードやサーバー接続は不要で、ブラウザの組み込み音声で即座に読み上げできます。<br>
+        利用できる音声はブラウザとOSにより異なります。
+      </div>
+      
+      <div class="control-group" id="browserDialogueEditorGroup">
+        <label>対話エディター</label>
+        <div class="hint">
+          各入力欄ごとに話者（音声）を設定できます。「分割」を押すとカーソル位置で新しいブロックを作ります。
+        </div>
+        
+        <div id="browserDialogueContainer"></div>
+        <button class="add-block-btn" id="browserAddBlockBtn">+ 新しい入力欄を追加</button>
+      </div>
+
+      <div style="margin-bottom: 24px;">
+        <label class="advanced-toggle">
+          <input type="checkbox" id="browserToggleAdvanced" style="width: auto; margin: 0;">
+          詳細パラメーターを表示
+        </label>
+        
+        <div id="browserAdvancedSettings" class="advanced-settings" style="display: none; flex-direction: column; gap: 16px;">
+          <div>
+            <label style="margin-bottom: 0;">読み上げ速度: <span id="browserSpeedDisplay" style="color: var(--browser-accent);">1.0</span>x</label>
+            <input type="range" id="browserSpeechSpeed" min="0.5" max="2.0" step="0.1" value="1.0">
+          </div>
+          <div>
+            <label style="margin-bottom: 0;">ピッチ: <span id="browserPitchDisplay" style="color: var(--browser-accent);">1.0</span></label>
+            <input type="range" id="browserPitch" min="0.5" max="2.0" step="0.1" value="1.0">
+          </div>
+          <div>
+            <label style="margin-bottom: 0;">音量: <span id="browserVolumeDisplay" style="color: var(--browser-accent);">1.0</span></label>
+            <input type="range" id="browserVolume" min="0.0" max="1.0" step="0.1" value="1.0">
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 12px; margin-bottom: 0;">
+        <button id="browserSpeakBtn" class="btn-browser" style="flex: 1; font-size: 1.1em; padding: 16px;">▶ 読み上げ開始</button>
+        <button id="browserStopBtn" class="btn-secondary" style="width: 120px; font-size: 1.1em; padding: 16px;" disabled>⏹ 停止</button>
+      </div>
+      <div class="status-text status-browser" id="browserStatus"></div>
+    </div>
+
+  </div><!-- /.container -->
+
+  <!-- ================================================================== -->
+  <!--  SCRIPTS                                                            -->
+  <!-- ================================================================== -->
   <script type="module">
     import { KokoroTTS } from 'https://cdn.jsdelivr.net/npm/kokoro-js@1.2.1/+esm';
-    
-    // UI要素の取得
-    const downloadBtn = document.getElementById('downloadBtn');
-    const generateBtn = document.getElementById('generateBtn');
-    const progressBar = document.getElementById('progressBar');
-    const progressText = document.getElementById('progressText');
-    const setupArea = document.getElementById('setupArea');
-    const statusText = document.getElementById('status');
-    const resultArea = document.getElementById('resultArea');
-    const audioPlayer = document.getElementById('audioPlayer');
-    const downloadLink = document.getElementById('downloadLink');
-    const saveDriveBtn = document.getElementById('saveDriveBtn');
-    const driveStatus = document.getElementById('driveStatus');
 
-    let synthesizer = null;
-    let currentAudioBlob = null; // 生成された音声Blobを保持
-    
+    // ==========================================
+    // Tab Switching Logic
+    // ==========================================
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    function switchTab(tabName) {
+      tabButtons.forEach(btn => {
+        btn.classList.remove('active-kokoro', 'active-piper', 'active-browser');
+        if (btn.dataset.tab === tabName) {
+          btn.classList.add(`active-${tabName}`);
+        }
+      });
+      tabContents.forEach(tc => {
+        tc.classList.toggle('active', tc.id === `tab-${tabName}`);
+      });
+    }
+
+    tabButtons.forEach(btn => {
+      btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+    });
+
     // GASのデプロイURL
     const GAS_URL = 'https://script.google.com/a/macros/yamagataps.jp/s/AKfycbxmVamqNrYxfTYhR3JquN1mksZZqbzpY94qGm9BNJqlNnPZiGkj4-2XgwXfkraL2ytfgw/exec';
 
     // ==========================================
-    // 1. AIモデルのダウンロード処理
+    //  共通ユーティリティ
     // ==========================================
-    downloadBtn.addEventListener('click', async () => {
-      try {
-        downloadBtn.disabled = true;
-        progressBar.style.display = 'block';
-        progressText.innerText = 'ダウンロードを開始しています...';
 
-        // プログレスコールバックを使って進捗を表示（※kokoro-jsがprogress_callbackをサポートしている場合は反映されます）
-        synthesizer = await KokoroTTS.from_pretrained('onnx-community/Kokoro-82M-v1.0-ONNX', {
-          dtype: 'q8',
-          device: 'wasm',
-          // progress_callback を一応渡しておく
-          progress_callback: (data) => {
-            if (data.status === 'downloading') {
-              progressText.innerText = `${data.file} をダウンロード中...`;
-            } else if (data.status === 'progress') {
-              progressBar.value = data.progress;
-              progressText.innerText = `${data.file} : ${Math.round(data.progress)}%`;
-            } else if (data.status === 'done') {
-              progressText.innerText = `${data.file} の準備が完了しました`;
-            }
-          }
-        });
-
-        // ダウンロード完了後のUI変更
-        progressText.innerText = '✅ モデルの準備が完了しました！音声を生成できます。';
-        progressText.style.color = 'var(--success)';
-        progressBar.style.display = 'none';
-        downloadBtn.style.display = 'none';
-        generateBtn.disabled = false; // 生成ボタンを有効化
-
-      } catch (err) {
-        progressText.innerText = 'エラーが発生しました: ' + err.message;
-        progressText.style.color = 'var(--danger)';
-        downloadBtn.disabled = false;
-        console.error(err);
-      }
-    });
-
-    // 詳細設定のトグル処理
-    const toggleAdvanced = document.getElementById('toggleAdvanced');
-    const advancedSettings = document.getElementById('advancedSettings');
-    toggleAdvanced.addEventListener('change', (e) => {
-      advancedSettings.style.display = e.target.checked ? 'flex' : 'none';
-    });
-
-    // 読み上げ速度スライダーの表示更新
-    const speechSpeed = document.getElementById('speechSpeed');
-    const speedDisplay = document.getElementById('speedDisplay');
-    speechSpeed.addEventListener('input', (e) => {
-      speedDisplay.innerText = Number(e.target.value).toFixed(1);
-    });
-
-    // 対話ブロックのUI生成ロジック
-    const dialogueContainer = document.getElementById('dialogueContainer');
-    const voiceOptionsHtml = `
+    // Kokoro 音声リスト
+    const kokoroVoiceOptionsHtml = `
       <option value="af_heart">米国・女性1 (US_F1)</option>
       <option value="af_sky">米国・女性2 (US_F2・高め)</option>
       <option value="am_adam">米国・男性1 (US_M1)</option>
@@ -390,17 +941,45 @@
       <option value="bm_george">英国・男性 (UK_M)</option>
     `;
 
-    function createDialogueBlock(text = '', voiceId = 'af_heart', speakerName = '') {
+    // Piper 音声リスト (ローカルサーバーからも取得可能、フォールバック用)
+    const piperVoiceOptionsHtml = `
+      <option value="en_US-lessac-medium">英語 US - Lessac (Medium)</option>
+      <option value="en_US-amy-medium">英語 US - Amy (Medium)</option>
+      <option value="en_US-ryan-medium">英語 US - Ryan (Medium)</option>
+      <option value="en_GB-alan-medium">英語 UK - Alan (Medium)</option>
+      <option value="ja_JP-takumi-medium">日本語 - Takumi (Medium)</option>
+      <option value="de_DE-thorsten-medium">ドイツ語 - Thorsten (Medium)</option>
+      <option value="fr_FR-upmc-medium">フランス語 - UPMC (Medium)</option>
+    `;
+
+    // ブラウザTTSの音声リストを動的に構築
+    function getBrowserVoiceOptionsHtml() {
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length === 0) return '<option value="">読み込み中...</option>';
+      let html = '';
+      voices.forEach((v, i) => {
+        const label = `${v.name} (${v.lang})${v.default ? ' ★' : ''}`;
+        html += `<option value="${i}">${label}</option>`;
+      });
+      return html;
+    }
+
+    // 対話ブロック生成（汎用）
+    function createDialogueBlock(engine, text = '', voiceValue = '', speakerName = '') {
       const block = document.createElement('div');
       block.className = 'dialogue-block';
-      block.style.cssText = 'border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; border-radius: 4px; background-color: #fafafa;';
       
+      let voiceHtml = '';
+      if (engine === 'kokoro') voiceHtml = kokoroVoiceOptionsHtml;
+      else if (engine === 'piper') voiceHtml = piperVoiceOptionsHtml;
+      else if (engine === 'browser') voiceHtml = getBrowserVoiceOptionsHtml();
+
       block.innerHTML = `
         <div class="block-controls">
           <div class="block-speaker-group">
             <input type="text" class="block-speaker-name" placeholder="話者名 (任意)" value="${speakerName}">
             <select class="block-voice">
-              ${voiceOptionsHtml}
+              ${voiceHtml}
             </select>
           </div>
           <div class="block-btn-group">
@@ -408,13 +987,18 @@
             <button class="btn-danger delete-btn" style="padding: 8px 12px; font-size: 0.85em;">削除</button>
           </div>
         </div>
-        <textarea class="block-text" placeholder="ここに英語のテキストを入力...">${text}</textarea>
+        <textarea class="block-text" placeholder="ここにテキストを入力...">${text}</textarea>
       `;
-      
-      block.querySelector('.block-voice').value = voiceId;
-      
+
+      if (voiceValue) {
+        const sel = block.querySelector('.block-voice');
+        if (sel) sel.value = voiceValue;
+      }
+
+      const container = document.getElementById(`${engine}DialogueContainer`);
+
       block.querySelector('.delete-btn').addEventListener('click', () => {
-        if (document.querySelectorAll('.dialogue-block').length > 1) {
+        if (container.querySelectorAll('.dialogue-block').length > 1) {
           block.remove();
         } else {
           alert("最低1つのブロックが必要です。");
@@ -425,17 +1009,17 @@
         const textarea = block.querySelector('.block-text');
         const cursorPos = textarea.selectionStart;
         const textAll = textarea.value;
+        const currentVoice = block.querySelector('.block-voice').value;
+        const currentSpeaker = block.querySelector('.block-speaker-name').value;
         
         if (cursorPos === undefined || cursorPos === textAll.length) {
-          const currentSpeaker = block.querySelector('.block-speaker-name').value;
-          const newBlock = createDialogueBlock('', voiceId, currentSpeaker);
+          const newBlock = createDialogueBlock(engine, '', currentVoice, currentSpeaker);
           block.after(newBlock);
         } else {
           const textBefore = textAll.substring(0, cursorPos);
           const textAfter = textAll.substring(cursorPos);
           textarea.value = textBefore;
-          const currentSpeaker = block.querySelector('.block-speaker-name').value;
-          const newBlock = createDialogueBlock(textAfter.trim(), voiceId, currentSpeaker);
+          const newBlock = createDialogueBlock(engine, textAfter.trim(), currentVoice, currentSpeaker);
           block.after(newBlock);
         }
       });
@@ -443,205 +1027,7 @@
       return block;
     }
 
-    document.getElementById('addBlockBtn').addEventListener('click', () => {
-      dialogueContainer.appendChild(createDialogueBlock());
-    });
-
-    // 初期データの挿入: 空のブロックを1つだけ生成
-    dialogueContainer.appendChild(createDialogueBlock("", "af_heart"));
-
-    // ==========================================
-    // 2. 音声の生成処理
-    // ==========================================
-    generateBtn.addEventListener('click', async () => {
-      const blocks = document.querySelectorAll('.dialogue-block');
-      if (blocks.length === 0 || !synthesizer) return;
-
-      try {
-        generateBtn.disabled = true;
-        resultArea.style.display = 'none';
-        
-        let combinedAudio = [];
-        let originalSampleRate = null;
-        const speedParam = parseFloat(document.getElementById('speechSpeed').value);
-
-        for (let b = 0; b < blocks.length; b++) {
-          const block = blocks[b];
-          const voiceId = block.querySelector('.block-voice').value;
-          const speakerName = block.querySelector('.block-speaker-name').value.trim();
-          const voiceLabel = block.querySelector('.block-voice').options[block.querySelector('.block-voice').selectedIndex].text.split(' ')[0];
-          const displaySpeaker = speakerName ? speakerName : voiceLabel;
-          
-          const blockText = block.querySelector('.block-text').value.trim();
-          
-          if (!blockText) continue;
-          
-          const lines = blockText.split('\n');
-          for (let i = 0; i < lines.length; i++) {
-            let line = lines[i].trim();
-            if (!line) continue;
-            
-            // 旧バージョンのタグが残っていれば除去
-            line = line.replace(/^\[?(US_F1|US_F2|US_M1|US_M2|UK_F|UK_M)\]?[:：]\s*/i, '');
-            if (!line) continue;
-            
-            statusText.innerText = `音声生成中... (${displaySpeaker} - ブロック ${b + 1}/${blocks.length}, 行 ${i + 1}/${lines.length})`;
-            
-            const result = await synthesizer.generate(line, { voice: voiceId, speed: speedParam });
-            
-            if (!originalSampleRate) {
-              originalSampleRate = result.sampling_rate;
-            }
-            combinedAudio.push(result.audio);
-          }
-        }
-
-        if (combinedAudio.length === 0) {
-          throw new Error("生成するテキストがありません。");
-        }
-
-        // 複数行の音声を連結（行の間に0.3秒の無音を挿入）
-        const silenceLength = Math.floor(originalSampleRate * 0.3);
-        const totalLength = combinedAudio.reduce((sum, arr) => sum + arr.length, 0) + silenceLength * Math.max(0, combinedAudio.length - 1);
-        const pcmData = new Float32Array(totalLength);
-        
-        let offset = 0;
-        for (let i = 0; i < combinedAudio.length; i++) {
-          pcmData.set(combinedAudio[i], offset);
-          offset += combinedAudio[i].length;
-          if (i < combinedAudio.length - 1) {
-            offset += silenceLength;
-          }
-        }
-
-        const rawAudioData = pcmData;
-
-        statusText.innerText = '音声の圧縮とWebMフォーマットへの変換中...';
-
-        const targetChannels = parseInt(document.getElementById('channel').value);
-        const targetSampleRate = parseInt(document.getElementById('sampleRate').value);
-        const targetBitrate = parseInt(document.getElementById('bitrate').value);
-        const outputFormat = document.getElementById('outputFormat').value;
-
-        statusText.innerText = `音声の圧縮と ${outputFormat.toUpperCase()} フォーマットへの変換中...`;
-
-        let finalBlob;
-        if (outputFormat === 'webm') {
-          finalBlob = await encodeToWebM(rawAudioData, originalSampleRate, targetChannels, targetSampleRate, targetBitrate);
-        } else if (outputFormat === 'wav') {
-          finalBlob = await encodeToWav(rawAudioData, originalSampleRate, targetChannels, targetSampleRate);
-        } else if (outputFormat === 'mp3') {
-          finalBlob = await encodeToMp3(rawAudioData, originalSampleRate, targetChannels, targetSampleRate, targetBitrate);
-        }
-
-        const audioUrl = URL.createObjectURL(finalBlob);
-        audioPlayer.src = audioUrl;
-        downloadLink.href = audioUrl;
-        
-        const dateStr = new Date().toISOString().replace(/[:.]/g, '-');
-        downloadLink.download = `speech_${dateStr}.${outputFormat}`;
-        downloadLink.innerText = `この音声をダウンロード (.${outputFormat})`;
-        
-        currentAudioBlob = finalBlob; // 保存用に保持
-        driveStatus.innerText = '';
-        saveDriveBtn.disabled = false;
-        
-        statusText.innerText = '完了しました！';
-        resultArea.style.display = 'block';
-
-      } catch (err) {
-        statusText.innerText = 'エラーが発生しました: ' + err.message;
-        console.error(err);
-      } finally {
-        generateBtn.disabled = false;
-      }
-    });
-
-    // ==========================================
-    // 3. Googleドライブへの保存処理
-    // ==========================================
-    function blobToBase64(blob) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          // data:audio/webm;base64, の部分を削除して返す
-          const base64data = reader.result.split(',')[1];
-          resolve(base64data);
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-    }
-
-    saveDriveBtn.addEventListener('click', async () => {
-      if (!currentAudioBlob) return;
-      try {
-        saveDriveBtn.disabled = true;
-        driveStatus.innerText = 'Googleドライブへ保存中... (しばらくお待ちください)';
-        driveStatus.style.color = 'var(--text-muted)';
-        
-        const base64Data = await blobToBase64(currentAudioBlob);
-        
-        // 結合されたテキストと設定情報を構築
-        const blocks = document.querySelectorAll('.dialogue-block');
-        let fullText = "";
-        let usedVoices = new Set();
-        blocks.forEach((b, index) => {
-           const select = b.querySelector('.block-voice');
-           const v = select.options[select.selectedIndex].text.split(' ')[0]; // 短くするため最初の部分だけ
-           const speakerName = b.querySelector('.block-speaker-name').value.trim();
-           const displayName = speakerName ? `${speakerName} (${v})` : v;
-           
-           const t = b.querySelector('.block-text').value.trim();
-           if(t) {
-             fullText += `[B${index+1}: ${displayName}] ${t}\n`;
-             usedVoices.add(displayName);
-           }
-        });
-
-        const voiceModel = Array.from(usedVoices).join(", ");
-        const speed = document.getElementById('speechSpeed').value;
-        const channel = document.getElementById('channel').options[document.getElementById('channel').selectedIndex].text;
-        const sampleRate = document.getElementById('sampleRate').options[document.getElementById('sampleRate').selectedIndex].text;
-        const bitrate = document.getElementById('bitrate').options[document.getElementById('bitrate').selectedIndex].text;
-        const outputFormat = document.getElementById('outputFormat').value;
-        
-        const payload = {
-          text: fullText,
-          voiceModel: voiceModel,
-          settings: `速度: ${speed}x, チャンネル: ${channel}, サンプルレート: ${sampleRate}, ビットレート: ${bitrate}`,
-          audioBase64: base64Data,
-          format: outputFormat
-        };
-
-        const response = await fetch(GAS_URL, {
-          method: 'POST',
-          // GASでCORSエラーを防ぐため text/plain を使用
-          headers: {
-            'Content-Type': 'text/plain;charset=utf-8',
-          },
-          body: JSON.stringify(payload)
-        });
-
-        const result = await response.json();
-        if (result.status === 'success') {
-          driveStatus.innerHTML = `✅ 保存成功！ <a href="${result.url}" target="_blank">Googleドライブで開く</a>`;
-          driveStatus.style.color = 'var(--success)';
-        } else {
-          throw new Error(result.message || '保存に失敗しました');
-        }
-      } catch (err) {
-        driveStatus.innerText = `❌ エラー: ${err.message}`;
-        driveStatus.style.color = 'var(--danger)';
-        saveDriveBtn.disabled = false;
-      }
-    });
-
-    // ==========================================
-    // 4. 音声変換関数群 (WebM, WAV, MP3)
-    // ==========================================
-    
-    // オフラインコンテキストを使ったリサンプリング
+    // 共通: オフラインコンテキストを使ったリサンプリング
     async function resampleAudio(pcmData, originalSampleRate, targetSampleRate, targetChannels) {
       const offlineCtx = new OfflineAudioContext(targetChannels, Math.ceil(pcmData.length * targetSampleRate / originalSampleRate), targetSampleRate);
       const audioBuffer = offlineCtx.createBuffer(1, pcmData.length, originalSampleRate);
@@ -719,7 +1105,7 @@
       writeString(view, 8, 'WAVE');
       writeString(view, 12, 'fmt ');
       view.setUint32(16, 16, true);
-      view.setUint16(20, 1, true); // PCM
+      view.setUint16(20, 1, true);
       view.setUint16(22, numChannels, true);
       view.setUint32(24, sampleRate, true);
       view.setUint32(28, sampleRate * numChannels * 2, true);
@@ -780,6 +1166,594 @@
 
       return new Blob(mp3Data, { type: 'audio/mp3' });
     }
+
+    function blobToBase64(blob) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64data = reader.result.split(',')[1];
+          resolve(base64data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    // Google Drive 保存（共通）
+    async function saveToGoogleDrive(engineName, audioBlob, blocks, speedEl, channelEl, sampleRateEl, bitrateEl, outputFormatVal, driveStatusEl, saveDriveBtn) {
+      if (!audioBlob) return;
+      try {
+        saveDriveBtn.disabled = true;
+        driveStatusEl.innerText = 'Googleドライブへ保存中... (しばらくお待ちください)';
+        driveStatusEl.style.color = 'var(--text-muted)';
+        
+        const base64Data = await blobToBase64(audioBlob);
+        
+        let fullText = "";
+        let usedVoices = new Set();
+        blocks.forEach((b, index) => {
+           const select = b.querySelector('.block-voice');
+           const v = select.options[select.selectedIndex].text.split(' ')[0];
+           const speakerName = b.querySelector('.block-speaker-name').value.trim();
+           const displayName = speakerName ? `${speakerName} (${v})` : v;
+           
+           const t = b.querySelector('.block-text').value.trim();
+           if(t) {
+             fullText += `[B${index+1}: ${displayName}] ${t}\n`;
+             usedVoices.add(displayName);
+           }
+        });
+
+        const voiceModel = `[${engineName}] ` + Array.from(usedVoices).join(", ");
+        const speed = speedEl ? speedEl.value : '1.0';
+        const channel = channelEl ? channelEl.options[channelEl.selectedIndex].text : 'モノラル';
+        const sampleRate = sampleRateEl ? sampleRateEl.options[sampleRateEl.selectedIndex].text : '-';
+        const bitrate = bitrateEl ? bitrateEl.options[bitrateEl.selectedIndex].text : '-';
+        
+        const payload = {
+          text: fullText,
+          voiceModel: voiceModel,
+          settings: `エンジン: ${engineName}, 速度: ${speed}x, チャンネル: ${channel}, サンプルレート: ${sampleRate}, ビットレート: ${bitrate}`,
+          audioBase64: base64Data,
+          format: outputFormatVal
+        };
+
+        const response = await fetch(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        if (result.status === 'success') {
+          driveStatusEl.innerHTML = `✅ 保存成功！ <a href="${result.url}" target="_blank">Googleドライブで開く</a>`;
+          driveStatusEl.style.color = 'var(--success)';
+        } else {
+          throw new Error(result.message || '保存に失敗しました');
+        }
+      } catch (err) {
+        driveStatusEl.innerText = `❌ エラー: ${err.message}`;
+        driveStatusEl.style.color = 'var(--danger)';
+        saveDriveBtn.disabled = false;
+      }
+    }
+
+    // ==========================================
+    //  KOKORO ENGINE
+    // ==========================================
+    const kokoroDownloadBtn = document.getElementById('kokoroDownloadBtn');
+    const kokoroGenerateBtn = document.getElementById('kokoroGenerateBtn');
+    const kokoroProgressBar = document.getElementById('kokoroProgressBar');
+    const kokoroProgressText = document.getElementById('kokoroProgressText');
+    const kokoroSetupArea = document.getElementById('kokoroSetupArea');
+    const kokoroStatusText = document.getElementById('kokoroStatus');
+    const kokoroResultArea = document.getElementById('kokoroResultArea');
+    const kokoroAudioPlayer = document.getElementById('kokoroAudioPlayer');
+    const kokoroDownloadLink = document.getElementById('kokoroDownloadLink');
+    const kokoroSaveDriveBtn = document.getElementById('kokoroSaveDriveBtn');
+    const kokoroDriveStatus = document.getElementById('kokoroDriveStatus');
+
+    let kokoroSynthesizer = null;
+    let kokoroCurrentAudioBlob = null;
+
+    // Kokoro: AIモデルのダウンロード
+    kokoroDownloadBtn.addEventListener('click', async () => {
+      try {
+        kokoroDownloadBtn.disabled = true;
+        kokoroProgressBar.style.display = 'block';
+        kokoroProgressText.innerText = 'ダウンロードを開始しています...';
+
+        kokoroSynthesizer = await KokoroTTS.from_pretrained('onnx-community/Kokoro-82M-v1.0-ONNX', {
+          dtype: 'q8',
+          device: 'wasm',
+          progress_callback: (data) => {
+            if (data.status === 'downloading') {
+              kokoroProgressText.innerText = `${data.file} をダウンロード中...`;
+            } else if (data.status === 'progress') {
+              kokoroProgressBar.value = data.progress;
+              kokoroProgressText.innerText = `${data.file} : ${Math.round(data.progress)}%`;
+            } else if (data.status === 'done') {
+              kokoroProgressText.innerText = `${data.file} の準備が完了しました`;
+            }
+          }
+        });
+
+        kokoroProgressText.innerText = '✅ モデルの準備が完了しました！音声を生成できます。';
+        kokoroProgressText.style.color = 'var(--success)';
+        kokoroProgressBar.style.display = 'none';
+        kokoroDownloadBtn.style.display = 'none';
+        kokoroGenerateBtn.disabled = false;
+
+      } catch (err) {
+        kokoroProgressText.innerText = 'エラーが発生しました: ' + err.message;
+        kokoroProgressText.style.color = 'var(--danger)';
+        kokoroDownloadBtn.disabled = false;
+        console.error(err);
+      }
+    });
+
+    // Kokoro: 詳細設定トグル
+    document.getElementById('kokoroToggleAdvanced').addEventListener('change', (e) => {
+      document.getElementById('kokoroAdvancedSettings').style.display = e.target.checked ? 'flex' : 'none';
+    });
+    document.getElementById('kokoroSpeechSpeed').addEventListener('input', (e) => {
+      document.getElementById('kokoroSpeedDisplay').innerText = Number(e.target.value).toFixed(1);
+    });
+
+    // Kokoro: 対話ブロック初期化
+    const kokoroDialogueContainer = document.getElementById('kokoroDialogueContainer');
+    kokoroDialogueContainer.appendChild(createDialogueBlock('kokoro', '', 'af_heart'));
+    document.getElementById('kokoroAddBlockBtn').addEventListener('click', () => {
+      kokoroDialogueContainer.appendChild(createDialogueBlock('kokoro'));
+    });
+
+    // Kokoro: 音声生成
+    kokoroGenerateBtn.addEventListener('click', async () => {
+      const blocks = kokoroDialogueContainer.querySelectorAll('.dialogue-block');
+      if (blocks.length === 0 || !kokoroSynthesizer) return;
+
+      try {
+        kokoroGenerateBtn.disabled = true;
+        kokoroResultArea.style.display = 'none';
+        
+        let combinedAudio = [];
+        let originalSampleRate = null;
+        const speedParam = parseFloat(document.getElementById('kokoroSpeechSpeed').value);
+
+        for (let b = 0; b < blocks.length; b++) {
+          const block = blocks[b];
+          const voiceId = block.querySelector('.block-voice').value;
+          const speakerName = block.querySelector('.block-speaker-name').value.trim();
+          const voiceLabel = block.querySelector('.block-voice').options[block.querySelector('.block-voice').selectedIndex].text.split(' ')[0];
+          const displaySpeaker = speakerName ? speakerName : voiceLabel;
+          
+          const blockText = block.querySelector('.block-text').value.trim();
+          if (!blockText) continue;
+          
+          const lines = blockText.split('\n');
+          for (let i = 0; i < lines.length; i++) {
+            let line = lines[i].trim();
+            if (!line) continue;
+            
+            line = line.replace(/^\[?(US_F1|US_F2|US_M1|US_M2|UK_F|UK_M)\]?[:：]\s*/i, '');
+            if (!line) continue;
+            
+            kokoroStatusText.innerText = `音声生成中... (${displaySpeaker} - ブロック ${b + 1}/${blocks.length}, 行 ${i + 1}/${lines.length})`;
+            
+            const result = await kokoroSynthesizer.generate(line, { voice: voiceId, speed: speedParam });
+            
+            if (!originalSampleRate) {
+              originalSampleRate = result.sampling_rate;
+            }
+            combinedAudio.push(result.audio);
+          }
+        }
+
+        if (combinedAudio.length === 0) {
+          throw new Error("生成するテキストがありません。");
+        }
+
+        const silenceLength = Math.floor(originalSampleRate * 0.3);
+        const totalLength = combinedAudio.reduce((sum, arr) => sum + arr.length, 0) + silenceLength * Math.max(0, combinedAudio.length - 1);
+        const pcmData = new Float32Array(totalLength);
+        
+        let offset = 0;
+        for (let i = 0; i < combinedAudio.length; i++) {
+          pcmData.set(combinedAudio[i], offset);
+          offset += combinedAudio[i].length;
+          if (i < combinedAudio.length - 1) {
+            offset += silenceLength;
+          }
+        }
+
+        const targetChannels = parseInt(document.getElementById('kokoroChannel').value);
+        const targetSampleRate = parseInt(document.getElementById('kokoroSampleRate').value);
+        const targetBitrate = parseInt(document.getElementById('kokoroBitrate').value);
+        const outputFormat = document.getElementById('kokoroOutputFormat').value;
+
+        kokoroStatusText.innerText = `音声の圧縮と ${outputFormat.toUpperCase()} フォーマットへの変換中...`;
+
+        let finalBlob;
+        if (outputFormat === 'webm') {
+          finalBlob = await encodeToWebM(pcmData, originalSampleRate, targetChannels, targetSampleRate, targetBitrate);
+        } else if (outputFormat === 'wav') {
+          finalBlob = await encodeToWav(pcmData, originalSampleRate, targetChannels, targetSampleRate);
+        } else if (outputFormat === 'mp3') {
+          finalBlob = await encodeToMp3(pcmData, originalSampleRate, targetChannels, targetSampleRate, targetBitrate);
+        }
+
+        const audioUrl = URL.createObjectURL(finalBlob);
+        kokoroAudioPlayer.src = audioUrl;
+        kokoroDownloadLink.href = audioUrl;
+        
+        const dateStr = new Date().toISOString().replace(/[:.]/g, '-');
+        kokoroDownloadLink.download = `kokoro_${dateStr}.${outputFormat}`;
+        kokoroDownloadLink.innerText = `この音声をダウンロード (.${outputFormat})`;
+        
+        kokoroCurrentAudioBlob = finalBlob;
+        kokoroDriveStatus.innerText = '';
+        kokoroSaveDriveBtn.disabled = false;
+        
+        kokoroStatusText.innerText = '完了しました！';
+        kokoroResultArea.style.display = 'block';
+
+      } catch (err) {
+        kokoroStatusText.innerText = 'エラーが発生しました: ' + err.message;
+        console.error(err);
+      } finally {
+        kokoroGenerateBtn.disabled = false;
+      }
+    });
+
+    // Kokoro: Google Drive保存
+    kokoroSaveDriveBtn.addEventListener('click', () => {
+      const blocks = kokoroDialogueContainer.querySelectorAll('.dialogue-block');
+      const outputFormat = document.getElementById('kokoroOutputFormat').value;
+      saveToGoogleDrive('Kokoro', kokoroCurrentAudioBlob, blocks,
+        document.getElementById('kokoroSpeechSpeed'),
+        document.getElementById('kokoroChannel'),
+        document.getElementById('kokoroSampleRate'),
+        document.getElementById('kokoroBitrate'),
+        outputFormat, kokoroDriveStatus, kokoroSaveDriveBtn
+      );
+    });
+
+
+    // ==========================================
+    //  PIPER ENGINE
+    // ==========================================
+    const piperConnectBtn = document.getElementById('piperConnectBtn');
+    const piperGenerateBtn = document.getElementById('piperGenerateBtn');
+    const piperConnectionStatus = document.getElementById('piperConnectionStatus');
+    const piperStatusText = document.getElementById('piperStatus');
+    const piperResultArea = document.getElementById('piperResultArea');
+    const piperAudioPlayer = document.getElementById('piperAudioPlayer');
+    const piperDownloadLink = document.getElementById('piperDownloadLink');
+    const piperSaveDriveBtn = document.getElementById('piperSaveDriveBtn');
+    const piperDriveStatus = document.getElementById('piperDriveStatus');
+
+    let piperServerConnected = false;
+    let piperCurrentAudioBlob = null;
+
+    // Piper: 接続テスト
+    piperConnectBtn.addEventListener('click', async () => {
+      const serverUrl = document.getElementById('piperServerUrl').value.trim();
+      piperConnectionStatus.innerHTML = '<span class="server-status-dot dot-checking"></span> 接続テスト中...';
+      
+      try {
+        const res = await fetch(`${serverUrl}/api/voices`, { method: 'GET', signal: AbortSignal.timeout(5000) });
+        if (res.ok) {
+          const voices = await res.json();
+          piperServerConnected = true;
+          piperConnectionStatus.innerHTML = '<span class="server-status-dot dot-online"></span> 接続成功！';
+          piperGenerateBtn.disabled = false;
+
+          // サーバーからの音声リストで更新
+          if (voices && Object.keys(voices).length > 0) {
+            let newOptionsHtml = '';
+            for (const [key, info] of Object.entries(voices)) {
+              const label = info.name || key;
+              const lang = info.language ? ` (${info.language.name_english || info.language.code})` : '';
+              newOptionsHtml += `<option value="${key}">${label}${lang}</option>`;
+            }
+            // 既存ブロックの音声リストを更新
+            document.querySelectorAll('#piperDialogueContainer .block-voice').forEach(sel => {
+              sel.innerHTML = newOptionsHtml;
+            });
+            // 以降の新規ブロック用にグローバル変数を更新（ブロック生成関数内で参照）
+            window._piperDynamicVoiceHtml = newOptionsHtml;
+          }
+        } else {
+          throw new Error(`サーバーが応答しましたがエラーです (HTTP ${res.status})`);
+        }
+      } catch (err) {
+        piperServerConnected = false;
+        piperGenerateBtn.disabled = true;
+        piperConnectionStatus.innerHTML = `<span class="server-status-dot dot-offline"></span> 接続失敗: ${err.message}`;
+      }
+    });
+
+    // Piper: 詳細設定トグル
+    document.getElementById('piperToggleAdvanced').addEventListener('change', (e) => {
+      document.getElementById('piperAdvancedSettings').style.display = e.target.checked ? 'flex' : 'none';
+    });
+    document.getElementById('piperSpeechSpeed').addEventListener('input', (e) => {
+      document.getElementById('piperSpeedDisplay').innerText = Number(e.target.value).toFixed(1);
+    });
+
+    // Piper: 対話ブロック初期化
+    const piperDialogueContainer = document.getElementById('piperDialogueContainer');
+    piperDialogueContainer.appendChild(createDialogueBlock('piper', '', 'en_US-lessac-medium'));
+    document.getElementById('piperAddBlockBtn').addEventListener('click', () => {
+      piperDialogueContainer.appendChild(createDialogueBlock('piper'));
+    });
+
+    // Piper: 音声生成
+    piperGenerateBtn.addEventListener('click', async () => {
+      const blocks = piperDialogueContainer.querySelectorAll('.dialogue-block');
+      if (blocks.length === 0 || !piperServerConnected) return;
+
+      const serverUrl = document.getElementById('piperServerUrl').value.trim();
+
+      try {
+        piperGenerateBtn.disabled = true;
+        piperResultArea.style.display = 'none';
+        
+        let combinedPcm = [];
+        let originalSampleRate = 22050; // Piper default
+        const speedParam = parseFloat(document.getElementById('piperSpeechSpeed').value);
+
+        for (let b = 0; b < blocks.length; b++) {
+          const block = blocks[b];
+          const voiceId = block.querySelector('.block-voice').value;
+          const speakerName = block.querySelector('.block-speaker-name').value.trim();
+          const voiceLabel = block.querySelector('.block-voice').options[block.querySelector('.block-voice').selectedIndex].text.split(' ')[0];
+          const displaySpeaker = speakerName ? speakerName : voiceLabel;
+          
+          const blockText = block.querySelector('.block-text').value.trim();
+          if (!blockText) continue;
+          
+          const lines = blockText.split('\n');
+          for (let i = 0; i < lines.length; i++) {
+            let line = lines[i].trim();
+            if (!line) continue;
+            
+            piperStatusText.innerText = `音声生成中... (${displaySpeaker} - ブロック ${b + 1}/${blocks.length}, 行 ${i + 1}/${lines.length})`;
+
+            // Piper HTTP API: テキストをPOSTしてWAVを受け取る
+            const params = new URLSearchParams({ text: line, voice: voiceId });
+            if (speedParam !== 1.0) params.append('lengthScale', (1.0 / speedParam).toFixed(2));
+
+            const res = await fetch(`${serverUrl}/api/tts?${params.toString()}`, {
+              method: 'GET',
+            });
+
+            if (!res.ok) throw new Error(`Piperサーバーエラー: HTTP ${res.status}`);
+
+            const wavArrayBuffer = await res.arrayBuffer();
+            
+            // WAVからPCMデータを抽出
+            const audioCtx = new AudioContext();
+            const decodedBuffer = await audioCtx.decodeAudioData(wavArrayBuffer);
+            originalSampleRate = decodedBuffer.sampleRate;
+            const channelData = decodedBuffer.getChannelData(0);
+            combinedPcm.push(new Float32Array(channelData));
+            audioCtx.close();
+          }
+        }
+
+        if (combinedPcm.length === 0) {
+          throw new Error("生成するテキストがありません。");
+        }
+
+        // 連結（0.3秒の無音挿入）
+        const silenceLength = Math.floor(originalSampleRate * 0.3);
+        const totalLength = combinedPcm.reduce((sum, arr) => sum + arr.length, 0) + silenceLength * Math.max(0, combinedPcm.length - 1);
+        const pcmData = new Float32Array(totalLength);
+        
+        let offset = 0;
+        for (let i = 0; i < combinedPcm.length; i++) {
+          pcmData.set(combinedPcm[i], offset);
+          offset += combinedPcm[i].length;
+          if (i < combinedPcm.length - 1) {
+            offset += silenceLength;
+          }
+        }
+
+        const targetChannels = parseInt(document.getElementById('piperChannel').value);
+        const targetSampleRate = parseInt(document.getElementById('piperSampleRate').value);
+        const targetBitrate = parseInt(document.getElementById('piperBitrate').value);
+        const outputFormat = document.getElementById('piperOutputFormat').value;
+
+        piperStatusText.innerText = `音声の圧縮と ${outputFormat.toUpperCase()} フォーマットへの変換中...`;
+
+        let finalBlob;
+        if (outputFormat === 'webm') {
+          finalBlob = await encodeToWebM(pcmData, originalSampleRate, targetChannels, targetSampleRate, targetBitrate);
+        } else if (outputFormat === 'wav') {
+          finalBlob = await encodeToWav(pcmData, originalSampleRate, targetChannels, targetSampleRate);
+        } else if (outputFormat === 'mp3') {
+          finalBlob = await encodeToMp3(pcmData, originalSampleRate, targetChannels, targetSampleRate, targetBitrate);
+        }
+
+        const audioUrl = URL.createObjectURL(finalBlob);
+        piperAudioPlayer.src = audioUrl;
+        piperDownloadLink.href = audioUrl;
+        
+        const dateStr = new Date().toISOString().replace(/[:.]/g, '-');
+        piperDownloadLink.download = `piper_${dateStr}.${outputFormat}`;
+        piperDownloadLink.innerText = `この音声をダウンロード (.${outputFormat})`;
+        
+        piperCurrentAudioBlob = finalBlob;
+        piperDriveStatus.innerText = '';
+        piperSaveDriveBtn.disabled = false;
+        
+        piperStatusText.innerText = '完了しました！';
+        piperResultArea.style.display = 'block';
+
+      } catch (err) {
+        piperStatusText.innerText = 'エラーが発生しました: ' + err.message;
+        console.error(err);
+      } finally {
+        piperGenerateBtn.disabled = false;
+      }
+    });
+
+    // Piper: Google Drive保存
+    piperSaveDriveBtn.addEventListener('click', () => {
+      const blocks = piperDialogueContainer.querySelectorAll('.dialogue-block');
+      const outputFormat = document.getElementById('piperOutputFormat').value;
+      saveToGoogleDrive('Piper', piperCurrentAudioBlob, blocks,
+        document.getElementById('piperSpeechSpeed'),
+        document.getElementById('piperChannel'),
+        document.getElementById('piperSampleRate'),
+        document.getElementById('piperBitrate'),
+        outputFormat, piperDriveStatus, piperSaveDriveBtn
+      );
+    });
+
+
+    // ==========================================
+    //  BROWSER TTS ENGINE
+    // ==========================================
+    const browserSpeakBtn = document.getElementById('browserSpeakBtn');
+    const browserStopBtn = document.getElementById('browserStopBtn');
+    const browserStatusText = document.getElementById('browserStatus');
+    const browserDialogueContainer = document.getElementById('browserDialogueContainer');
+
+    // ブラウザTTS: 音声リストの読み込み
+    let browserVoicesLoaded = false;
+    function loadBrowserVoices() {
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0 && !browserVoicesLoaded) {
+        browserVoicesLoaded = true;
+        // 全ての既存ブロックの音声セレクタを更新
+        const html = getBrowserVoiceOptionsHtml();
+        document.querySelectorAll('#browserDialogueContainer .block-voice').forEach(sel => {
+          const current = sel.value;
+          sel.innerHTML = html;
+          if (current) sel.value = current;
+        });
+      }
+    }
+
+    // 音声リストは非同期でロードされる場合がある
+    window.speechSynthesis.onvoiceschanged = loadBrowserVoices;
+    loadBrowserVoices();
+
+    // ブラウザTTS: 詳細設定トグル
+    document.getElementById('browserToggleAdvanced').addEventListener('change', (e) => {
+      document.getElementById('browserAdvancedSettings').style.display = e.target.checked ? 'flex' : 'none';
+    });
+    document.getElementById('browserSpeechSpeed').addEventListener('input', (e) => {
+      document.getElementById('browserSpeedDisplay').innerText = Number(e.target.value).toFixed(1);
+    });
+    document.getElementById('browserPitch').addEventListener('input', (e) => {
+      document.getElementById('browserPitchDisplay').innerText = Number(e.target.value).toFixed(1);
+    });
+    document.getElementById('browserVolume').addEventListener('input', (e) => {
+      document.getElementById('browserVolumeDisplay').innerText = Number(e.target.value).toFixed(1);
+    });
+
+    // ブラウザTTS: 対話ブロック初期化
+    browserDialogueContainer.appendChild(createDialogueBlock('browser'));
+    document.getElementById('browserAddBlockBtn').addEventListener('click', () => {
+      browserDialogueContainer.appendChild(createDialogueBlock('browser'));
+    });
+
+    // ブラウザTTS: 読み上げ実行
+    browserSpeakBtn.addEventListener('click', async () => {
+      const blocks = browserDialogueContainer.querySelectorAll('.dialogue-block');
+      if (blocks.length === 0) return;
+
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length === 0) {
+        browserStatusText.innerText = 'ブラウザ音声が利用できません。';
+        return;
+      }
+
+      window.speechSynthesis.cancel();
+
+      browserSpeakBtn.disabled = true;
+      browserStopBtn.disabled = false;
+
+      const speedParam = parseFloat(document.getElementById('browserSpeechSpeed').value);
+      const pitchParam = parseFloat(document.getElementById('browserPitch').value);
+      const volumeParam = parseFloat(document.getElementById('browserVolume').value);
+
+      // 全ブロック・全行のUtteranceキューを構築
+      const utterances = [];
+      for (let b = 0; b < blocks.length; b++) {
+        const block = blocks[b];
+        const voiceIdx = parseInt(block.querySelector('.block-voice').value);
+        const speakerName = block.querySelector('.block-speaker-name').value.trim();
+        const voiceObj = voices[voiceIdx] || voices[0];
+        const displaySpeaker = speakerName || voiceObj.name;
+        
+        const blockText = block.querySelector('.block-text').value.trim();
+        if (!blockText) continue;
+        
+        const lines = blockText.split('\n');
+        for (let i = 0; i < lines.length; i++) {
+          let line = lines[i].trim();
+          if (!line) continue;
+          
+          utterances.push({ text: line, voice: voiceObj, speaker: displaySpeaker, blockIdx: b, lineIdx: i, totalBlocks: blocks.length, totalLines: lines.length });
+        }
+      }
+
+      if (utterances.length === 0) {
+        browserStatusText.innerText = '読み上げるテキストがありません。';
+        browserSpeakBtn.disabled = false;
+        browserStopBtn.disabled = true;
+        return;
+      }
+
+      // 逐次的に再生
+      let idx = 0;
+      function speakNext() {
+        if (idx >= utterances.length) {
+          browserStatusText.innerText = '読み上げ完了！';
+          browserSpeakBtn.disabled = false;
+          browserStopBtn.disabled = true;
+          return;
+        }
+
+        const u = utterances[idx];
+        const utt = new SpeechSynthesisUtterance(u.text);
+        utt.voice = u.voice;
+        utt.rate = speedParam;
+        utt.pitch = pitchParam;
+        utt.volume = volumeParam;
+
+        browserStatusText.innerText = `読み上げ中... (${u.speaker} - ブロック ${u.blockIdx + 1}/${u.totalBlocks}, 行 ${u.lineIdx + 1}/${u.totalLines})`;
+
+        utt.onend = () => {
+          idx++;
+          speakNext();
+        };
+        utt.onerror = (e) => {
+          if (e.error !== 'canceled') {
+            browserStatusText.innerText = `エラー: ${e.error}`;
+          }
+          browserSpeakBtn.disabled = false;
+          browserStopBtn.disabled = true;
+        };
+
+        window.speechSynthesis.speak(utt);
+      }
+
+      speakNext();
+    });
+
+    // ブラウザTTS: 停止
+    browserStopBtn.addEventListener('click', () => {
+      window.speechSynthesis.cancel();
+      browserStatusText.innerText = '停止しました。';
+      browserSpeakBtn.disabled = false;
+      browserStopBtn.disabled = true;
+    });
+
   </script>
 </body>
 </html>
