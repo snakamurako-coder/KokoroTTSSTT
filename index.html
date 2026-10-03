@@ -639,6 +639,7 @@
     }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/kuromoji@0.1.2/build/kuromoji.js"></script>
 </head>
 <body>
   <div class="container">
@@ -677,7 +678,7 @@
         <label>対話エディター</label>
         <div class="hint">
           各入力欄ごとに話者を設定できます。「分割」を押すとカーソル位置で新しいブロックを作ります。<br>
-          <span class="warning">※ 現在のブラウザ版ONNXモデルは英語専用です。英文を入力してください。</span>
+          <span style="color: #c4b5fd;">※ 日本語（漢字・ひらがな・カタカナ）および英語の読み上げに対応しています。</span>
         </div>
         
         <div id="kokoroDialogueContainer"></div>
@@ -770,7 +771,7 @@
         <label>対話エディター</label>
         <div class="hint">
           各入力欄ごとに話者を設定できます。「分割」を押すとカーソル位置で新しいブロックを作ります。<br>
-          <span class="warning">※ Piperの音声モデルにより対応言語が異なります。</span>
+          <span style="color: #99f6e4;">※ 日本語モデル（Takumi、つくよみちゃん等）で高品質な日本語読み上げが可能です。</span>
         </div>
         
         <div id="piperDialogueContainer"></div>
@@ -851,7 +852,7 @@
 
       <div class="browser-tts-note">
         <strong>ブラウザTTS</strong>はWeb Speech APIを使用します。<br>
-        モデルのダウンロードやサーバー接続は不要で、ブラウザの組み込み音声で即座に読み上げできます。<br>
+        モデルのダウンロードやサーバー接続は不要で、ブラウザ組み込みの日本語音声（Microsoft Nanami / Keita, Google 日本語, Kyoko, Otoya 等）で即座に読み上げできます。<br>
         利用できる音声はブラウザとOSにより異なります。
       </div>
       
@@ -900,7 +901,7 @@
   <!--  SCRIPTS                                                            -->
   <!-- ================================================================== -->
   <script type="module">
-    import { KokoroTTS } from 'https://cdn.jsdelivr.net/npm/kokoro-js@1.2.1/+esm';
+    import { KokoroTTS } from 'https://cdn.jsdelivr.net/npm/@somniumism/kokoro-js-ja@1.2.3/dist/kokoro.web.js';
 
     // ==========================================
     // Tab Switching Logic
@@ -928,40 +929,270 @@
     const GAS_URL = 'https://script.google.com/a/macros/yamagataps.jp/s/AKfycbxmVamqNrYxfTYhR3JquN1mksZZqbzpY94qGm9BNJqlNnPZiGkj4-2XgwXfkraL2ytfgw/exec';
 
     // ==========================================
+    //  日本語音素変換エンジン (Kokoro G2P)
+    // ==========================================
+    // Mora to Phoneme mapping (Kokoro-82M Japanese specification)
+    const KOKORO_M2P = {
+      'ァ': 'a', 'ア': 'a', 'ィ': 'i', 'イ': 'i', 'ゥ': 'u', 'ウ': 'u', 'ェ': 'e', 'エ': 'e', 'ォ': 'o', 'オ': 'o',
+      'カ': 'ka', 'ガ': 'ga', 'キ': 'ki', 'ギ': 'gi', 'ク': 'ku', 'グ': 'gu', 'ケ': 'ke', 'ゲ': 'ge', 'コ': 'ko', 'ゴ': 'go',
+      'サ': 'sa', 'ザ': 'za', 'シ': 'ɕi', 'ジ': 'ʥi', 'ス': 'su', 'ズ': 'zu', 'セ': 'se', 'ゼ': 'ze', 'ソ': 'so', 'ゾ': 'zo',
+      'タ': 'ta', 'ダ': 'da', 'チ': 'ʨi', 'ヂ': 'ʥi', 'ツ': 'ʦu', 'ヅ': 'zu', 'テ': 'te', 'デ': 'de', 'ト': 'to', 'ド': 'do',
+      'ナ': 'na', 'ニ': 'ni', 'ヌ': 'nu', 'ネ': 'ne', 'ノ': 'no',
+      'ハ': 'ha', 'バ': 'ba', 'パ': 'pa', 'ヒ': 'hi', 'ビ': 'bi', 'ピ': 'pi', 'フ': 'fu', 'ブ': 'bu', 'プ': 'pu',
+      'ヘ': 'he', 'ベ': 'be', 'ペ': 'pe', 'ホ': 'ho', 'ボ': 'bo', 'ポ': 'po',
+      'マ': 'ma', 'ミ': 'mi', 'ム': 'mu', 'メ': 'me', 'モ': 'mo',
+      'ャ': 'ja', 'ヤ': 'ja', 'ュ': 'ju', 'ユ': 'ju', 'ョ': 'jo', 'ヨ': 'jo',
+      'ラ': 'ra', 'リ': 'ri', 'ル': 'ru', 'レ': 're', 'ロ': 'ro',
+      'ヮ': 'wa', 'ワ': 'wa', 'ヰ': 'i', 'ヱ': 'e', 'ヲ': 'o',
+      'ヴ': 'vu', 'ヵ': 'ka', 'ヶ': 'ke', 'ッ': 'ʔ', 'ン': 'ɴ', 'ー': 'ː',
+      // 拗音・特殊モーラ
+      'イェ': 'je', 'ウィ': 'wi', 'ウゥ': 'wu', 'ウェ': 'we', 'ウォ': 'wo',
+      'キャ': 'ᶄa', 'キュ': 'ᶄu', 'キョ': 'ᶄo', 'キィ': 'ᶄi', 'キェ': 'ᶄe',
+      'ギャ': 'ᶃa', 'ギュ': 'ᶃu', 'ギョ': 'ᶃo', 'ギィ': 'ᶃi', 'ギェ': 'ᶃe',
+      'クァ': 'Ka', 'クィ': 'Ki', 'クゥ': 'Ku', 'クェ': 'Ke', 'クォ': 'Ko',
+      'グァ': 'Ga', 'グィ': 'Gi', 'グゥ': 'Gu', 'グェ': 'Ge', 'グォ': 'Go',
+      'シャ': 'ɕa', 'シュ': 'ɕu', 'ショ': 'ɕo', 'シェ': 'ɕe',
+      'ジャ': 'ʥa', 'ジュ': 'ʥu', 'ジョ': 'ʥo', 'ジェ': 'ʥe',
+      'スィ': 'si', 'ズィ': 'zi',
+      'チャ': 'ʨa', 'チュ': 'ʨu', 'チョ': 'ʨo', 'チェ': 'ʨe',
+      'ヂャ': 'ʥa', 'ヂュ': 'ʥu', 'ヂョ': 'ʥo', 'ヂェ': 'ʥe',
+      'ツァ': 'ʦa', 'ツィ': 'ʦi', 'ツェ': 'ʦe', 'ツォ': 'ʦo',
+      'ティ': 'ti', 'テュ': 'ƫu', 'テェ': 'ƫe', 'テャ': 'ƫa', 'テョ': 'ƫo',
+      'ディ': 'di', 'デュ': 'ᶁu', 'デェ': 'ᶁe', 'デャ': 'ᶁa', 'デョ': 'ᶁo',
+      'トゥ': 'tu', 'ドゥ': 'du',
+      'ニャ': 'ɲa', 'ニュ': 'ɲu', 'ニョ': 'ɲo', 'ニィ': 'ɲi', 'ニェ': 'ɲe',
+      'ヒャ': 'ça', 'ヒュ': 'çu', 'ヒョ': 'ço', 'ヒィ': 'çi', 'ヒェ': 'çe',
+      'ビャ': 'ᶀa', 'ビュ': 'ᶀu', 'ビョ': 'ᶀo', 'ビィ': 'ᶀi', 'ビェ': 'ᶀe',
+      'ピャ': 'ᶈa', 'ピュ': 'ᶈu', 'ピョ': 'ᶈo', 'ピィ': 'ᶈi', 'ピェ': 'ᶈe',
+      'ファ': 'fa', 'フィ': 'fi', 'フェ': 'fe', 'フォ': 'fo',
+      'ミャ': 'ᶆa', 'ミュ': 'ᶆu', 'ミョ': 'ᶆo', 'ミィ': 'ᶆi', 'ミェ': 'ᶆe',
+      'リャ': 'ᶉa', 'リュ': 'ᶉu', 'リョ': 'ᶉo', 'リィ': 'ᶉi', 'リェ': 'ᶉe',
+      'ヴァ': 'va', 'ヴィ': 'vi', 'ヴェ': 've', 'ヴォ': 'vo',
+      'ヴャ': 'ᶀa', 'ヴュ': 'ᶀu', 'ヴョ': 'ᶀo'
+    };
+
+    const KOKORO_PUNCT_MAP = {
+      '、': ', ', '，': ', ', '。': '. ', '．': '. ', '！': '! ', '!': '! ', '？': '? ', '?': '? ',
+      '「': ' "', '」': '" ', '『': ' "', '』': '" ', '（': ' (', '）': ') ', '(': ' (', ')': ') ',
+      '：': ': ', '；': '; ', '　': ' ', ' ': ' ', '\n': ' '
+    };
+
+    // 基本的な漢字読みフォールバック辞書
+    const KANJI_FALLBACK = {
+      '私': 'ワタシ', 'わたし': 'ワタシ', '僕': 'ボク', 'ぼく': 'ボク', '俺': 'オレ',
+      '今日': 'キョウ', '明日': 'アシタ', '昨日': 'キノウ', '今': 'イマ',
+      '日本': 'ニホン', '日本語': 'ニホンゴ', '音声': 'オンセイ', '合成': 'ゴウセイ',
+      '猫': 'ネコ', '犬': 'イヌ', '人': 'ヒト', '友': 'トモ', '友達': 'トモダチ',
+      '心': 'ココロ', '学校': 'ガッコウ', '会社': 'カイシャ', '仕事': 'シゴト',
+      '天気': 'テンキ', '元気': 'ゲンキ', '時間': 'ジカン', '名前': 'ナマエ',
+      '本': 'ホン', '車': 'クルマ', '電車': 'デンシャ', '駅': 'エキ',
+      '言': 'イ', '話': 'ハナ', '行': 'イ', '来': 'キ', '見': 'ミ',
+      '食': 'タ', '飲': 'ノ', '聞': 'キ', '読': 'ヨ', '書': 'カ',
+      '良': 'イ', '好': 'ス', '大': 'オオ', '小': 'チイ', '高': 'タカ',
+      '新': 'アタラ', '古': 'フル', '早': 'ハヤ', '美': 'ウツク', '楽': 'タノ'
+    };
+
+    function hiraToKata(str) {
+      return str.replace(/[\u3041-\u3096]/g, ch => String.fromCharCode(ch.charCodeAt(0) + 0x60));
+    }
+
+    function numberToJapaneseKana(numStr) {
+      const digits = ['ゼロ', 'イチ', 'ニ', 'サン', 'ヨン', 'ゴ', 'ロク', 'ナナ', 'ハチ', 'キュウ'];
+      return numStr.replace(/\d+/g, (match) => {
+        const n = parseInt(match, 10);
+        if (isNaN(n)) return match;
+        if (n <= 10) {
+          if (n === 10) return 'ジュウ';
+          return digits[n];
+        }
+        if (n < 20) return 'ジュウ' + digits[n % 10];
+        if (n < 100) {
+          const ten = Math.floor(n / 10);
+          const one = n % 10;
+          return (ten === 1 ? '' : digits[ten]) + 'ジュウ' + (one === 0 ? '' : digits[one]);
+        }
+        return match.split('').map(d => digits[parseInt(d, 10)]).join('');
+      });
+    }
+
+    function katakanaToKokoroPhonemes(kata) {
+      let result = '';
+      let i = 0;
+      while (i < kata.length) {
+        const c1 = kata[i];
+        if (KOKORO_PUNCT_MAP[c1]) {
+          result += KOKORO_PUNCT_MAP[c1];
+          i++;
+          continue;
+        }
+        if (i + 1 < kata.length) {
+          const c2 = kata[i + 1];
+          if (KOKORO_M2P[c1 + c2]) {
+            result += KOKORO_M2P[c1 + c2];
+            i += 2;
+            continue;
+          }
+        }
+        if (KOKORO_M2P[c1]) {
+          result += KOKORO_M2P[c1];
+        } else if (/[a-zA-Z0-9 ]/.test(c1)) {
+          result += c1;
+        }
+        i++;
+      }
+      return result.replace(/\s+/g, ' ').trim();
+    }
+
+    let kuromojiTokenizer = null;
+    let kuromojiLoadingPromise = null;
+
+    function initKuromoji() {
+      if (kuromojiTokenizer) return Promise.resolve(kuromojiTokenizer);
+      if (kuromojiLoadingPromise) return kuromojiLoadingPromise;
+
+      if (typeof kuromoji === 'undefined') {
+        console.warn('Kuromoji is not loaded');
+        return Promise.resolve(null);
+      }
+
+      kuromojiLoadingPromise = new Promise((resolve) => {
+        kuromoji.builder({ dicPath: "https://cdn.jsdelivr.net/npm/kuromoji@0.1.2/dict/" }).build((err, tokenizer) => {
+          if (err) {
+            console.warn('Kuromoji init failed, falling back to rule-based parser:', err);
+            resolve(null);
+          } else {
+            kuromojiTokenizer = tokenizer;
+            console.log('Kuromoji tokenizer ready!');
+            resolve(tokenizer);
+          }
+        });
+      });
+      return kuromojiLoadingPromise;
+    }
+
+    async function textToKokoroPhonemes(text) {
+      if (!text) return '';
+      let processed = numberToJapaneseKana(text);
+
+      let kata = '';
+      if (kuromojiTokenizer) {
+        const tokens = kuromojiTokenizer.tokenize(processed);
+        for (let i = 0; i < tokens.length; i++) {
+          const tk = tokens[i];
+          let r = tk.reading || tk.surface_form;
+          if (tk.pos === '助詞') {
+            if (tk.surface_form === 'は') r = 'ワ';
+            else if (tk.surface_form === 'へ') r = 'エ';
+          }
+          if (/[\u4E00-\u9FAF]/.test(r)) {
+            for (const [k, v] of Object.entries(KANJI_FALLBACK)) {
+              r = r.replaceAll(k, v);
+            }
+          }
+          kata += hiraToKata(r);
+        }
+      } else {
+        let s = processed;
+        for (const [k, v] of Object.entries(KANJI_FALLBACK)) {
+          s = s.replaceAll(k, v);
+        }
+        kata = hiraToKata(s);
+      }
+
+      return katakanaToKokoroPhonemes(kata);
+    }
+
+    // ==========================================
     //  共通ユーティリティ
     // ==========================================
 
-    // Kokoro 音声リスト
+    // Kokoro 音声リスト（日本語音声5種類＋英語音声）
     const kokoroVoiceOptionsHtml = `
-      <option value="af_heart">米国・女性1 (US_F1)</option>
-      <option value="af_sky">米国・女性2 (US_F2・高め)</option>
-      <option value="am_adam">米国・男性1 (US_M1)</option>
-      <option value="am_onyx">米国・男性2 (US_M2・低め)</option>
-      <option value="bf_emma">英国・女性 (UK_F)</option>
-      <option value="bm_george">英国・男性 (UK_M)</option>
+      <optgroup label="🇯🇵 日本語音声">
+        <option value="jf_alpha" selected>🌸 日本語・女性1 (Alpha・落ち着いた声)</option>
+        <option value="jf_gongitsune">🦊 日本語・女性2 (ごんぎつね・明るい声)</option>
+        <option value="jf_nezumi">🐭 日本語・女性3 (ねずみ・可愛らしい声)</option>
+        <option value="jf_tebukuro">🧤 日本語・女性4 (手袋・優しい声)</option>
+        <option value="jm_kumo">🕷️ 日本語・男性 (蜘蛛・深みのある声)</option>
+      </optgroup>
+      <optgroup label="🇺🇸 米国英語">
+        <option value="af_heart">米国・女性1 (Heart)</option>
+        <option value="af_sky">米国・女性2 (Sky・高め)</option>
+        <option value="am_adam">米国・男性1 (Adam)</option>
+        <option value="am_onyx">米国・男性2 (Onyx・低め)</option>
+      </optgroup>
+      <optgroup label="🇬🇧 英国英語">
+        <option value="bf_emma">英国・女性 (Emma)</option>
+        <option value="bm_george">英国・男性 (George)</option>
+      </optgroup>
     `;
 
-    // Piper 音声リスト (ローカルサーバーからも取得可能、フォールバック用)
+    // Piper 音声リスト（日本語モデルを最優先配置）
     const piperVoiceOptionsHtml = `
-      <option value="en_US-lessac-medium">英語 US - Lessac (Medium)</option>
-      <option value="en_US-amy-medium">英語 US - Amy (Medium)</option>
-      <option value="en_US-ryan-medium">英語 US - Ryan (Medium)</option>
-      <option value="en_GB-alan-medium">英語 UK - Alan (Medium)</option>
-      <option value="ja_JP-takumi-medium">日本語 - Takumi (Medium)</option>
-      <option value="de_DE-thorsten-medium">ドイツ語 - Thorsten (Medium)</option>
-      <option value="fr_FR-upmc-medium">フランス語 - UPMC (Medium)</option>
+      <optgroup label="🇯🇵 日本語モデル">
+        <option value="ja_JP-takumi-medium" selected>🇯🇵 日本語 - Takumi (Medium・標準)</option>
+        <option value="ja_JP-tsukuyomi-chan-medium">🇯🇵 日本語 - つくよみちゃん (Medium・女性)</option>
+        <option value="ja_JP-css10-6lang-medium">🇯🇵 日本語 - CSS10 (Medium・多言語)</option>
+      </optgroup>
+      <optgroup label="🇺🇸 英語モデル">
+        <option value="en_US-lessac-medium">英語 US - Lessac (Medium)</option>
+        <option value="en_US-amy-medium">英語 US - Amy (Medium)</option>
+        <option value="en_US-ryan-medium">英語 US - Ryan (Medium)</option>
+        <option value="en_GB-alan-medium">英語 UK - Alan (Medium)</option>
+      </optgroup>
+      <optgroup label="🌐 その他の言語">
+        <option value="de_DE-thorsten-medium">ドイツ語 - Thorsten (Medium)</option>
+        <option value="fr_FR-upmc-medium">フランス語 - UPMC (Medium)</option>
+      </optgroup>
     `;
 
-    // ブラウザTTSの音声リストを動的に構築
-    function getBrowserVoiceOptionsHtml() {
+    // ブラウザTTSの音声リストを動的に構築（日本語音声を最優先グループ化）
+    function getBrowserVoiceOptionsHtml(selectedVoiceIndex = null) {
       const voices = window.speechSynthesis.getVoices();
-      if (voices.length === 0) return '<option value="">読み込み中...</option>';
-      let html = '';
+      if (voices.length === 0) return { html: '<option value="">読み込み中...</option>', defaultIdx: 0 };
+      
+      const jaVoices = [];
+      const otherVoices = [];
+
       voices.forEach((v, i) => {
-        const label = `${v.name} (${v.lang})${v.default ? ' ★' : ''}`;
-        html += `<option value="${i}">${label}</option>`;
+        const isJa = v.lang && (v.lang.toLowerCase().startsWith('ja') || v.lang.includes('JP'));
+        const isJaName = /japanese|日本語|kyoko|otoya|nanami|keita|ichiro|haruka|ayumi/i.test(v.name);
+        const item = { voice: v, index: i };
+        if (isJa || isJaName) {
+          jaVoices.push(item);
+        } else {
+          otherVoices.push(item);
+        }
       });
-      return html;
+
+      let defaultIdx = jaVoices.length > 0 ? jaVoices[0].index : 0;
+      const defaultJa = jaVoices.find(j => j.voice.default);
+      if (defaultJa) defaultIdx = defaultJa.index;
+
+      const activeIdx = selectedVoiceIndex !== null ? selectedVoiceIndex : defaultIdx;
+
+      let html = '';
+      if (jaVoices.length > 0) {
+        html += '<optgroup label="🇯🇵 日本語音声">';
+        jaVoices.forEach(j => {
+          const v = j.voice;
+          const isSelected = j.index === activeIdx ? ' selected' : '';
+          html += `<option value="${j.index}"${isSelected}>${v.name} (${v.lang})${v.default ? ' ★' : ''}</option>`;
+        });
+        html += '</optgroup>';
+      }
+
+      if (otherVoices.length > 0) {
+        html += '<optgroup label="🌐 その他の言語">';
+        otherVoices.forEach(o => {
+          const v = o.voice;
+          const isSelected = o.index === activeIdx ? ' selected' : '';
+          html += `<option value="${o.index}"${isSelected}>${v.name} (${v.lang})${v.default ? ' ★' : ''}</option>`;
+        });
+        html += '</optgroup>';
+      }
+
+      return { html, defaultIdx };
     }
 
     // 対話ブロック生成（汎用）
@@ -970,9 +1201,20 @@
       block.className = 'dialogue-block';
       
       let voiceHtml = '';
-      if (engine === 'kokoro') voiceHtml = kokoroVoiceOptionsHtml;
-      else if (engine === 'piper') voiceHtml = piperVoiceOptionsHtml;
-      else if (engine === 'browser') voiceHtml = getBrowserVoiceOptionsHtml();
+      let defaultVoice = voiceValue;
+      if (engine === 'kokoro') {
+        voiceHtml = kokoroVoiceOptionsHtml;
+        if (!defaultVoice) defaultVoice = 'jf_alpha';
+      } else if (engine === 'piper') {
+        voiceHtml = window._piperDynamicVoiceHtml || piperVoiceOptionsHtml;
+        if (!defaultVoice) defaultVoice = 'ja_JP-takumi-medium';
+      } else if (engine === 'browser') {
+        const bRes = getBrowserVoiceOptionsHtml(voiceValue !== '' && voiceValue !== null ? parseInt(voiceValue) : null);
+        voiceHtml = bRes.html;
+        if ((defaultVoice === '' || defaultVoice === null) && bRes.defaultIdx !== undefined) {
+          defaultVoice = bRes.defaultIdx;
+        }
+      }
 
       block.innerHTML = `
         <div class="block-controls">
@@ -990,9 +1232,9 @@
         <textarea class="block-text" placeholder="ここにテキストを入力...">${text}</textarea>
       `;
 
-      if (voiceValue) {
+      if (defaultVoice !== undefined && defaultVoice !== '' && defaultVoice !== null) {
         const sel = block.querySelector('.block-voice');
-        if (sel) sel.value = voiceValue;
+        if (sel) sel.value = String(defaultVoice);
       }
 
       const container = document.getElementById(`${engine}DialogueContainer`);
@@ -1261,7 +1503,10 @@
       try {
         kokoroDownloadBtn.disabled = true;
         kokoroProgressBar.style.display = 'block';
-        kokoroProgressText.innerText = 'ダウンロードを開始しています...';
+        kokoroProgressText.innerText = 'AI音声モデルと日本語辞書の準備を開始しています...';
+
+        // 日本語形態素解析器（Kuromoji）のロードを並行開始
+        initKuromoji();
 
         kokoroSynthesizer = await KokoroTTS.from_pretrained('onnx-community/Kokoro-82M-v1.0-ONNX', {
           dtype: 'q8',
@@ -1278,7 +1523,11 @@
           }
         });
 
-        kokoroProgressText.innerText = '✅ モデルの準備が完了しました！音声を生成できます。';
+        // Kuromoji完了待ち（最大3秒待機、完了してなくてもフォールバック可能）
+        kokoroProgressText.innerText = '日本語形態素辞書を初期化中...';
+        await Promise.race([initKuromoji(), new Promise(r => setTimeout(r, 3000))]);
+
+        kokoroProgressText.innerText = '✅ モデルと日本語エンジンの準備が完了しました！音声を生成できます。';
         kokoroProgressText.style.color = 'var(--success)';
         kokoroProgressBar.style.display = 'none';
         kokoroDownloadBtn.style.display = 'none';
@@ -1302,7 +1551,7 @@
 
     // Kokoro: 対話ブロック初期化
     const kokoroDialogueContainer = document.getElementById('kokoroDialogueContainer');
-    kokoroDialogueContainer.appendChild(createDialogueBlock('kokoro', '', 'af_heart'));
+    kokoroDialogueContainer.appendChild(createDialogueBlock('kokoro', '', 'jf_alpha'));
     document.getElementById('kokoroAddBlockBtn').addEventListener('click', () => {
       kokoroDialogueContainer.appendChild(createDialogueBlock('kokoro'));
     });
@@ -1335,12 +1584,18 @@
             let line = lines[i].trim();
             if (!line) continue;
             
-            line = line.replace(/^\[?(US_F1|US_F2|US_M1|US_M2|UK_F|UK_M)\]?[:：]\s*/i, '');
+            line = line.replace(/^\[?(US_F1|US_F2|US_M1|US_M2|UK_F|UK_M|JP_F1|JP_F2|JP_F3|JP_F4|JP_M1|Takumi|つくよみちゃん|女性|男性|話者[0-9]+)\]?[:：]\s*/i, '');
             if (!line) continue;
             
+            let genInput = line;
+            if (voiceId.startsWith('j')) {
+              kokoroStatusText.innerText = `日本語を音素解析中... (${displaySpeaker} - ブロック ${b + 1}/${blocks.length})`;
+              genInput = await textToKokoroPhonemes(line);
+            }
+
             kokoroStatusText.innerText = `音声生成中... (${displaySpeaker} - ブロック ${b + 1}/${blocks.length}, 行 ${i + 1}/${lines.length})`;
             
-            const result = await kokoroSynthesizer.generate(line, { voice: voiceId, speed: speedParam });
+            const result = await kokoroSynthesizer.generate(genInput, { voice: voiceId, speed: speedParam });
             
             if (!originalSampleRate) {
               originalSampleRate = result.sampling_rate;
@@ -1448,19 +1703,34 @@
           piperConnectionStatus.innerHTML = '<span class="server-status-dot dot-online"></span> 接続成功！';
           piperGenerateBtn.disabled = false;
 
-          // サーバーからの音声リストで更新
+          // サーバーからの音声リストで更新（日本語モデルを最優先）
           if (voices && Object.keys(voices).length > 0) {
-            let newOptionsHtml = '';
+            let jaOptions = '';
+            let otherOptions = '';
             for (const [key, info] of Object.entries(voices)) {
               const label = info.name || key;
-              const lang = info.language ? ` (${info.language.name_english || info.language.code})` : '';
-              newOptionsHtml += `<option value="${key}">${label}${lang}</option>`;
+              const langCode = (info.language && info.language.code) || '';
+              const langName = (info.language && info.language.name_english) || '';
+              const isJa = langCode.startsWith('ja') || key.startsWith('ja_');
+              const langStr = info.language ? ` (${langName || langCode})` : '';
+              const opt = `<option value="${key}">${label}${langStr}</option>`;
+              if (isJa) {
+                jaOptions += opt;
+              } else {
+                otherOptions += opt;
+              }
             }
+            let newOptionsHtml = '';
+            if (jaOptions) newOptionsHtml += `<optgroup label="🇯🇵 日本語モデル">${jaOptions}</optgroup>`;
+            if (otherOptions) newOptionsHtml += `<optgroup label="🌐 その他のモデル">${otherOptions}</optgroup>`;
+            if (!newOptionsHtml) newOptionsHtml = jaOptions || otherOptions;
+
             // 既存ブロックの音声リストを更新
             document.querySelectorAll('#piperDialogueContainer .block-voice').forEach(sel => {
+              const prev = sel.value;
               sel.innerHTML = newOptionsHtml;
+              if (prev && sel.querySelector(`option[value="${prev}"]`)) sel.value = prev;
             });
-            // 以降の新規ブロック用にグローバル変数を更新（ブロック生成関数内で参照）
             window._piperDynamicVoiceHtml = newOptionsHtml;
           }
         } else {
@@ -1483,7 +1753,7 @@
 
     // Piper: 対話ブロック初期化
     const piperDialogueContainer = document.getElementById('piperDialogueContainer');
-    piperDialogueContainer.appendChild(createDialogueBlock('piper', '', 'en_US-lessac-medium'));
+    piperDialogueContainer.appendChild(createDialogueBlock('piper', '', 'ja_JP-takumi-medium'));
     document.getElementById('piperAddBlockBtn').addEventListener('click', () => {
       piperDialogueContainer.appendChild(createDialogueBlock('piper'));
     });
@@ -1627,12 +1897,16 @@
       const voices = window.speechSynthesis.getVoices();
       if (voices.length > 0 && !browserVoicesLoaded) {
         browserVoicesLoaded = true;
-        // 全ての既存ブロックの音声セレクタを更新
-        const html = getBrowserVoiceOptionsHtml();
+        // 全ての既存ブロックの音声セレクタを更新（日本語音声を最優先）
         document.querySelectorAll('#browserDialogueContainer .block-voice').forEach(sel => {
           const current = sel.value;
-          sel.innerHTML = html;
-          if (current) sel.value = current;
+          const bRes = getBrowserVoiceOptionsHtml(current !== '' ? parseInt(current) : null);
+          sel.innerHTML = bRes.html;
+          if (current !== '') {
+            sel.value = current;
+          } else {
+            sel.value = String(bRes.defaultIdx);
+          }
         });
       }
     }
@@ -1722,6 +1996,7 @@
         const u = utterances[idx];
         const utt = new SpeechSynthesisUtterance(u.text);
         utt.voice = u.voice;
+        utt.lang = (u.voice && u.voice.lang) ? u.voice.lang : 'ja-JP';
         utt.rate = speedParam;
         utt.pitch = pitchParam;
         utt.volume = volumeParam;
