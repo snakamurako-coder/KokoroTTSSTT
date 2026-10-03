@@ -639,7 +639,6 @@
     }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/kuromoji@0.1.2/build/kuromoji.js"></script>
 </head>
 <body>
   <div class="container">
@@ -678,7 +677,7 @@
         <label>対話エディター</label>
         <div class="hint">
           各入力欄ごとに話者を設定できます。「分割」を押すとカーソル位置で新しいブロックを作ります。<br>
-          <span style="color: #c4b5fd;">※ 日本語（漢字・ひらがな・カタカナ）および英語の読み上げに対応しています。</span>
+          <span style="color: #c4b5fd;">※ 日本語および英語の読み上げに対応しています（漢字の読みが不自然な場合は、ひらがなで入力すると正確に発音します）。</span>
         </div>
         
         <div id="kokoroDialogueContainer"></div>
@@ -977,20 +976,111 @@
       '：': ': ', '；': '; ', '　': ' ', ' ': ' ', '\n': ' '
     };
 
-    // 基本的な漢字読みフォールバック辞書
-    const KANJI_FALLBACK = {
-      '私': 'ワタシ', 'わたし': 'ワタシ', '僕': 'ボク', 'ぼく': 'ボク', '俺': 'オレ',
-      '今日': 'キョウ', '明日': 'アシタ', '昨日': 'キノウ', '今': 'イマ',
-      '日本': 'ニホン', '日本語': 'ニホンゴ', '音声': 'オンセイ', '合成': 'ゴウセイ',
-      '猫': 'ネコ', '犬': 'イヌ', '人': 'ヒト', '友': 'トモ', '友達': 'トモダチ',
-      '心': 'ココロ', '学校': 'ガッコウ', '会社': 'カイシャ', '仕事': 'シゴト',
-      '天気': 'テンキ', '元気': 'ゲンキ', '時間': 'ジカン', '名前': 'ナマエ',
-      '本': 'ホン', '車': 'クルマ', '電車': 'デンシャ', '駅': 'エキ',
-      '言': 'イ', '話': 'ハナ', '行': 'イ', '来': 'キ', '見': 'ミ',
-      '食': 'タ', '飲': 'ノ', '聞': 'キ', '読': 'ヨ', '書': 'カ',
-      '良': 'イ', '好': 'ス', '大': 'オオ', '小': 'チイ', '高': 'タカ',
-      '新': 'アタラ', '古': 'フル', '早': 'ハヤ', '美': 'ウツク', '楽': 'タノ'
-    };
+    // 頻出漢字・単語の軽量読み辞書（長い文字列を優先して置換）
+    const KANJI_ENTRIES = [
+      ['こんにちは', 'コンニチワ'],
+      ['こんばんは', 'コンバンワ'],
+      ['おはようございます', 'オハヨウゴザイマス'],
+      ['ありがとうございます', 'アリガトウゴザイマス'],
+      ['はじめまして', 'ハジメマシテ'],
+      ['よろしくおねがいします', 'ヨロシクオネガイシマス'],
+      ['よろしくお願いします', 'ヨロシクオネガイシマス'],
+      ['日本語', 'ニホンゴ'],
+      ['音声合成', 'オンセイゴウセイ'],
+      ['音声', 'オンセイ'],
+      ['合成', 'ゴウセイ'],
+      ['今日', 'キョウ'],
+      ['明日', 'アシタ'],
+      ['昨日', 'キノウ'],
+      ['今週', 'コンシュウ'],
+      ['来週', 'ライシュウ'],
+      ['先週', 'センシュウ'],
+      ['今年', 'コトシ'],
+      ['来年', 'ライネン'],
+      ['去年', 'キョネン'],
+      ['時間', 'ジカン'],
+      ['名前', 'ナマエ'],
+      ['学校', 'ガッコウ'],
+      ['会社', 'カイシャ'],
+      ['仕事', 'シゴト'],
+      ['先生', 'センセイ'],
+      ['友達', 'トモダチ'],
+      ['家族', 'カゾク'],
+      ['天気', 'テンキ'],
+      ['元気', 'ゲンキ'],
+      ['東京', 'トウキョウ'],
+      ['日本', 'ニホン'],
+      ['世界', 'セカイ'],
+      ['電車', 'デンシャ'],
+      ['自動車', 'ジドウシャ'],
+      ['飛行機', 'ヒコウキ'],
+      ['私', 'ワタシ'],
+      ['僕', 'ボク'],
+      ['俺', 'オレ'],
+      ['君', 'キミ'],
+      ['あなた', 'アナタ'],
+      ['彼', 'カレ'],
+      ['彼女', 'カノジョ'],
+      ['誰', 'ダレ'],
+      ['何', 'ナニ'],
+      ['どこ', 'ドコ'],
+      ['猫', 'ネコ'],
+      ['犬', 'イヌ'],
+      ['人', 'ヒト'],
+      ['本', 'ホン'],
+      ['車', 'クルマ'],
+      ['駅', 'エキ'],
+      ['手', 'テ'],
+      ['目', 'メ'],
+      ['口', 'クチ'],
+      ['耳', 'ミミ'],
+      ['心', 'ココロ'],
+      ['頭', 'アタマ'],
+      ['朝', 'アサ'],
+      ['昼', 'ヒル'],
+      ['夜', 'ヨル'],
+      ['今', 'イマ'],
+      ['前', 'マエ'],
+      ['後', 'アト'],
+      ['右', 'ミギ'],
+      ['左', 'ヒダリ'],
+      ['上', 'ウエ'],
+      ['下', 'シタ'],
+      ['中', 'ナカ'],
+      ['外', 'ソト'],
+      ['大', 'オオ'],
+      ['小', 'チイ'],
+      ['高', 'タカ'],
+      ['安', 'ヤス'],
+      ['新', 'アタラ'],
+      ['古', 'フル'],
+      ['良', 'イ'],
+      ['悪', 'ワル'],
+      ['多', 'オオ'],
+      ['少', 'スク'],
+      ['早', 'ハヤ'],
+      ['遅', 'オソ'],
+      ['食', 'タ'],
+      ['飲', 'ノ'],
+      ['見', 'ミ'],
+      ['聞', 'キ'],
+      ['言', 'イ'],
+      ['話', 'ハナ'],
+      ['読', 'ヨ'],
+      ['書', 'カ'],
+      ['行', 'イ'],
+      ['来', 'キ'],
+      ['帰', 'カエ'],
+      ['買', 'カ'],
+      ['売', 'ウ'],
+      ['作', 'ツク'],
+      ['使', 'ツカ'],
+      ['思', 'オモ'],
+      ['知', 'シ'],
+      ['分', 'ワカ'],
+      ['出', 'デ'],
+      ['入', 'ハイ']
+    ];
 
     function hiraToKata(str) {
       return str.replace(/[\u3041-\u3096]/g, ch => String.fromCharCode(ch.charCodeAt(0) + 0x60));
@@ -1043,62 +1133,29 @@
       return result.replace(/\s+/g, ' ').trim();
     }
 
-    let kuromojiTokenizer = null;
-    let kuromojiLoadingPromise = null;
-
-    function initKuromoji() {
-      if (kuromojiTokenizer) return Promise.resolve(kuromojiTokenizer);
-      if (kuromojiLoadingPromise) return kuromojiLoadingPromise;
-
-      if (typeof kuromoji === 'undefined') {
-        console.warn('Kuromoji is not loaded');
-        return Promise.resolve(null);
-      }
-
-      kuromojiLoadingPromise = new Promise((resolve) => {
-        kuromoji.builder({ dicPath: "https://cdn.jsdelivr.net/npm/kuromoji@0.1.2/dict/" }).build((err, tokenizer) => {
-          if (err) {
-            console.warn('Kuromoji init failed, falling back to rule-based parser:', err);
-            resolve(null);
-          } else {
-            kuromojiTokenizer = tokenizer;
-            console.log('Kuromoji tokenizer ready!');
-            resolve(tokenizer);
-          }
-        });
-      });
-      return kuromojiLoadingPromise;
-    }
-
-    async function textToKokoroPhonemes(text) {
+    // 日本語テキストを Kokoro 音素列（IPA）に高速変換（メインスレッドの負荷ゼロ）
+    function textToKokoroPhonemes(text) {
       if (!text) return '';
+      
+      // 1. 数字を日本語読みに変換（例: "12" -> "ジュウニ"）
       let processed = numberToJapaneseKana(text);
 
-      let kata = '';
-      if (kuromojiTokenizer) {
-        const tokens = kuromojiTokenizer.tokenize(processed);
-        for (let i = 0; i < tokens.length; i++) {
-          const tk = tokens[i];
-          let r = tk.reading || tk.surface_form;
-          if (tk.pos === '助詞') {
-            if (tk.surface_form === 'は') r = 'ワ';
-            else if (tk.surface_form === 'へ') r = 'エ';
-          }
-          if (/[\u4E00-\u9FAF]/.test(r)) {
-            for (const [k, v] of Object.entries(KANJI_FALLBACK)) {
-              r = r.replaceAll(k, v);
-            }
-          }
-          kata += hiraToKata(r);
+      // 2. 助詞の「は」「へ」を発音通りに補正（「私は」->「私ワ」）
+      processed = processed.replace(/([^\s、。！？\n])は([\s、。！？\n]|$)/g, '$1ワ$2');
+      processed = processed.replace(/([^\s、。！？\n])へ([\s、。！？\n]|$)/g, '$1エ$2');
+
+      // 3. 頻出漢字・単語をカタカナに置換
+      for (let i = 0; i < KANJI_ENTRIES.length; i++) {
+        const [k, v] = KANJI_ENTRIES[i];
+        if (processed.includes(k)) {
+          processed = processed.replaceAll(k, v);
         }
-      } else {
-        let s = processed;
-        for (const [k, v] of Object.entries(KANJI_FALLBACK)) {
-          s = s.replaceAll(k, v);
-        }
-        kata = hiraToKata(s);
       }
 
+      // 4. ひらがなをカタカナに変換
+      let kata = hiraToKata(processed);
+
+      // 5. カタカナ文字列を Kokoro 音素（IPA）に変換
       return katakanaToKokoroPhonemes(kata);
     }
 
@@ -1503,31 +1560,39 @@
       try {
         kokoroDownloadBtn.disabled = true;
         kokoroProgressBar.style.display = 'block';
-        kokoroProgressText.innerText = 'AI音声モデルと日本語辞書の準備を開始しています...';
-
-        // 日本語形態素解析器（Kuromoji）のロードを並行開始
-        initKuromoji();
+        kokoroProgressBar.value = 0;
+        kokoroProgressText.innerText = 'AI音声モデルのダウンロードを開始しています (約88MB)...';
+        kokoroProgressText.style.color = 'var(--text-main)';
 
         kokoroSynthesizer = await KokoroTTS.from_pretrained('onnx-community/Kokoro-82M-v1.0-ONNX', {
           dtype: 'q8',
           device: 'wasm',
           progress_callback: (data) => {
-            if (data.status === 'downloading') {
-              kokoroProgressText.innerText = `${data.file} をダウンロード中...`;
+            if (data.status === 'initiate') {
+              kokoroProgressText.innerText = `${data.file || 'モデル'} の接続準備中...`;
+            } else if (data.status === 'downloading') {
+              kokoroProgressText.innerText = `${data.file || 'モデル'} をダウンロード中...`;
             } else if (data.status === 'progress') {
+              kokoroProgressBar.style.display = 'block';
               kokoroProgressBar.value = data.progress;
-              kokoroProgressText.innerText = `${data.file} : ${Math.round(data.progress)}%`;
+              let sizeInfo = '';
+              if (data.loaded && data.total) {
+                const loadedMB = (data.loaded / (1024 * 1024)).toFixed(1);
+                const totalMB = (data.total / (1024 * 1024)).toFixed(1);
+                sizeInfo = ` (${loadedMB}MB / ${totalMB}MB)`;
+              }
+              const percent = Math.round(data.progress || 0);
+              kokoroProgressText.innerText = `${data.file || 'モデル'} をダウンロード中: ${percent}%${sizeInfo}`;
             } else if (data.status === 'done') {
-              kokoroProgressText.innerText = `${data.file} の準備が完了しました`;
+              kokoroProgressBar.value = 100;
+              kokoroProgressText.innerText = `${data.file || 'モデル'} のダウンロード完了。AIメモリにロード中...`;
+            } else if (data.status === 'ready') {
+              kokoroProgressText.innerText = `AIエンジンの初期化完了`;
             }
           }
         });
 
-        // Kuromoji完了待ち（最大3秒待機、完了してなくてもフォールバック可能）
-        kokoroProgressText.innerText = '日本語形態素辞書を初期化中...';
-        await Promise.race([initKuromoji(), new Promise(r => setTimeout(r, 3000))]);
-
-        kokoroProgressText.innerText = '✅ モデルと日本語エンジンの準備が完了しました！音声を生成できます。';
+        kokoroProgressText.innerText = '✅ AI音声モデルの準備が完了しました！音声を生成できます。';
         kokoroProgressText.style.color = 'var(--success)';
         kokoroProgressBar.style.display = 'none';
         kokoroDownloadBtn.style.display = 'none';
@@ -1536,7 +1601,9 @@
       } catch (err) {
         kokoroProgressText.innerText = 'エラーが発生しました: ' + err.message;
         kokoroProgressText.style.color = 'var(--danger)';
+        kokoroProgressBar.style.display = 'none';
         kokoroDownloadBtn.disabled = false;
+        kokoroDownloadBtn.innerText = '🔄 再試行する';
         console.error(err);
       }
     });
