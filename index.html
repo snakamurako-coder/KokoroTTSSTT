@@ -651,11 +651,11 @@
       </button>
       <button class="tab-btn" data-tab="piper" id="tabBtnPiper">
         <span class="tab-label">⚡ Piper</span>
-        <span class="tab-sub">即応性×品質</span>
+        <span class="tab-sub">高速・多言語</span>
       </button>
       <button class="tab-btn" data-tab="browser" id="tabBtnBrowser">
         <span class="tab-label">🌐 ブラウザTTS</span>
-        <span class="tab-sub">事前準備不要</span>
+        <span class="tab-sub">日本語・即座利用</span>
       </button>
     </nav>
 
@@ -753,10 +753,10 @@
     <!-- ================================================================== -->
     <div class="tab-content" id="tab-piper" data-theme="piper">
       <h2 class="heading-piper">⚡ Piper Studio</h2>
-      <div class="engine-badge badge-piper">⚖️ 即応性と品質のバランス</div>
+      <div class="engine-badge badge-piper">⚡ 高速・軽量・英語/多言語 AI音声合成</div>
 
       <div class="setup-area" id="piperSetupArea">
-        <p style="margin-top: 0;">ローカルのPiper TTSサーバーに接続します</p>
+        <p style="margin-top: 0;">Piper TTSサーバーに接続します</p>
         <div class="server-config">
           <input type="text" id="piperServerUrl" value="http://localhost:5000" placeholder="Piperサーバー URL">
           <button id="piperConnectBtn" class="btn-piper" style="white-space: nowrap;">接続テスト</button>
@@ -770,7 +770,7 @@
         <label>対話エディター</label>
         <div class="hint">
           各入力欄ごとに話者を設定できます。「分割」を押すとカーソル位置で新しいブロックを作ります。<br>
-          <span style="color: #99f6e4;">※ 日本語モデル（Takumi、つくよみちゃん等）で高品質な日本語読み上げが可能です。</span>
+          <span style="color: #99f6e4;">※ 英語および各国語モデルに対応しています（日本語の読み上げには「🌐 ブラウザTTS」をご利用ください）。</span>
         </div>
         
         <div id="piperDialogueContainer"></div>
@@ -971,22 +971,25 @@
       </optgroup>
     `;
 
-    // Piper 音声リスト（日本語モデルを最優先配置）
+    // Piper 音声リスト（英語・多言語モデル）
     const piperVoiceOptionsHtml = `
-      <optgroup label="🇯🇵 日本語モデル">
-        <option value="ja_JP-takumi-medium" selected>🇯🇵 日本語 - Takumi (Medium・標準)</option>
-        <option value="ja_JP-tsukuyomi-chan-medium">🇯🇵 日本語 - つくよみちゃん (Medium・女性)</option>
-        <option value="ja_JP-css10-6lang-medium">🇯🇵 日本語 - CSS10 (Medium・多言語)</option>
+      <optgroup label="🇺🇸 米国英語モデル">
+        <option value="en_US-lessac-medium" selected>英語 US - Lessac (Medium・標準)</option>
+        <option value="en_US-amy-medium">英語 US - Amy (Medium・女性)</option>
+        <option value="en_US-ryan-medium">英語 US - Ryan (Medium・男性)</option>
+        <option value="en_US-danny-low">英語 US - Danny (Low・軽量)</option>
+        <option value="en_US-joe-medium">英語 US - Joe (Medium)</option>
+        <option value="en_US-kristin-medium">英語 US - Kristin (Medium)</option>
       </optgroup>
-      <optgroup label="🇺🇸 英語モデル">
-        <option value="en_US-lessac-medium">英語 US - Lessac (Medium)</option>
-        <option value="en_US-amy-medium">英語 US - Amy (Medium)</option>
-        <option value="en_US-ryan-medium">英語 US - Ryan (Medium)</option>
-        <option value="en_GB-alan-medium">英語 UK - Alan (Medium)</option>
+      <optgroup label="🇬🇧 英国英語モデル">
+        <option value="en_GB-alan-medium">英語 UK - Alan (Medium・男性)</option>
+        <option value="en_GB-southern_english_female-low">英語 UK - 女性 (Low)</option>
       </optgroup>
-      <optgroup label="🌐 その他の言語">
+      <optgroup label="🌐 その他の多言語モデル">
         <option value="de_DE-thorsten-medium">ドイツ語 - Thorsten (Medium)</option>
         <option value="fr_FR-upmc-medium">フランス語 - UPMC (Medium)</option>
+        <option value="es_ES-carlfm-medium">スペイン語 - Carlfm (Medium)</option>
+        <option value="zh_CN-huayan-medium">中国語 - Huayan (Medium)</option>
       </optgroup>
     `;
 
@@ -1051,7 +1054,7 @@
         if (!defaultVoice) defaultVoice = 'af_heart';
       } else if (engine === 'piper') {
         voiceHtml = window._piperDynamicVoiceHtml || piperVoiceOptionsHtml;
-        if (!defaultVoice) defaultVoice = 'ja_JP-takumi-medium';
+        if (!defaultVoice) defaultVoice = 'en_US-lessac-medium';
       } else if (engine === 'browser') {
         const bRes = getBrowserVoiceOptionsHtml(voiceValue !== '' && voiceValue !== null ? parseInt(voiceValue) : null);
         voiceHtml = bRes.html;
@@ -1551,27 +1554,30 @@
           piperConnectionStatus.innerHTML = '<span class="server-status-dot dot-online"></span> 接続成功！';
           piperGenerateBtn.disabled = false;
 
-          // サーバーからの音声リストで更新（日本語モデルを最優先）
+          // サーバーからの音声リストで更新（日本語モデルは除外、英語・多言語モデルを整理）
           if (voices && Object.keys(voices).length > 0) {
-            let jaOptions = '';
+            let enOptions = '';
             let otherOptions = '';
             for (const [key, info] of Object.entries(voices)) {
               const label = info.name || key;
               const langCode = (info.language && info.language.code) || '';
               const langName = (info.language && info.language.name_english) || '';
-              const isJa = langCode.startsWith('ja') || key.startsWith('ja_');
+              const isJa = langCode.startsWith('ja') || key.startsWith('ja_') || /takumi|tsukuyomi/i.test(key);
+              if (isJa) continue; // 日本語モデルは除外
+
+              const isEn = langCode.startsWith('en') || key.startsWith('en_');
               const langStr = info.language ? ` (${langName || langCode})` : '';
               const opt = `<option value="${key}">${label}${langStr}</option>`;
-              if (isJa) {
-                jaOptions += opt;
+              if (isEn) {
+                enOptions += opt;
               } else {
                 otherOptions += opt;
               }
             }
             let newOptionsHtml = '';
-            if (jaOptions) newOptionsHtml += `<optgroup label="🇯🇵 日本語モデル">${jaOptions}</optgroup>`;
-            if (otherOptions) newOptionsHtml += `<optgroup label="🌐 その他のモデル">${otherOptions}</optgroup>`;
-            if (!newOptionsHtml) newOptionsHtml = jaOptions || otherOptions;
+            if (enOptions) newOptionsHtml += `<optgroup label="🇺🇸/🇬🇧 英語モデル">${enOptions}</optgroup>`;
+            if (otherOptions) newOptionsHtml += `<optgroup label="🌐 その他の多言語モデル">${otherOptions}</optgroup>`;
+            if (!newOptionsHtml) newOptionsHtml = enOptions || otherOptions;
 
             // 既存ブロックの音声リストを更新
             document.querySelectorAll('#piperDialogueContainer .block-voice').forEach(sel => {
@@ -1601,7 +1607,7 @@
 
     // Piper: 対話ブロック初期化
     const piperDialogueContainer = document.getElementById('piperDialogueContainer');
-    piperDialogueContainer.appendChild(createDialogueBlock('piper', '', 'ja_JP-takumi-medium'));
+    piperDialogueContainer.appendChild(createDialogueBlock('piper', '', 'en_US-lessac-medium'));
     document.getElementById('piperAddBlockBtn').addEventListener('click', () => {
       piperDialogueContainer.appendChild(createDialogueBlock('piper'));
     });
