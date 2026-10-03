@@ -647,7 +647,7 @@
     <nav class="tab-nav">
       <button class="tab-btn active-kokoro" data-tab="kokoro" id="tabBtnKokoro">
         <span class="tab-label">🎵 Kokoro</span>
-        <span class="tab-sub">最高品質</span>
+        <span class="tab-sub">英語専用・最高峰</span>
       </button>
       <button class="tab-btn" data-tab="piper" id="tabBtnPiper">
         <span class="tab-label">⚡ Piper</span>
@@ -664,10 +664,10 @@
     <!-- ================================================================== -->
     <div class="tab-content active" id="tab-kokoro" data-theme="kokoro">
       <h2 class="heading-kokoro">✨ Kokoro Studio</h2>
-      <div class="engine-badge badge-kokoro">🏆 最高品質 AI音声合成</div>
+      <div class="engine-badge badge-kokoro">🏆 英語専用・最高品質 AI音声合成</div>
 
       <div class="setup-area" id="kokoroSetupArea">
-        <p style="margin-top: 0;">高品質なAI音声モデル(約80MB)をブラウザにロードします</p>
+        <p style="margin-top: 0;">世界最高峰の英語AI音声モデル(約80MB)をブラウザにロードします</p>
         <button id="kokoroDownloadBtn" class="btn-kokoro">AIモデルをロード</button>
         <progress id="kokoroProgressBar" value="0" max="100" style="display: none;"></progress>
         <div class="progress-text" id="kokoroProgressText"></div>
@@ -677,7 +677,7 @@
         <label>対話エディター</label>
         <div class="hint">
           各入力欄ごとに話者を設定できます。「分割」を押すとカーソル位置で新しいブロックを作ります。<br>
-          <span style="color: #c4b5fd;">※ 日本語および英語の読み上げに対応しています（漢字の読みが不自然な場合は、ひらがなで入力すると正確に発音します）。</span>
+          <span style="color: #c4b5fd;">※ 英語専用エンジンです（日本語の読み上げには「⚡ Piper」または「🌐 ブラウザTTS」をご利用ください）。</span>
         </div>
         
         <div id="kokoroDialogueContainer"></div>
@@ -928,259 +928,46 @@
     const GAS_URL = 'https://script.google.com/a/macros/yamagataps.jp/s/AKfycbxmVamqNrYxfTYhR3JquN1mksZZqbzpY94qGm9BNJqlNnPZiGkj4-2XgwXfkraL2ytfgw/exec';
 
     // ==========================================
-    //  日本語音素変換エンジン (Kokoro G2P)
-    // ==========================================
-    // Mora to Phoneme mapping (Kokoro-82M Japanese specification)
-    const KOKORO_M2P = {
-      'ァ': 'a', 'ア': 'a', 'ィ': 'i', 'イ': 'i', 'ゥ': 'u', 'ウ': 'u', 'ェ': 'e', 'エ': 'e', 'ォ': 'o', 'オ': 'o',
-      'カ': 'ka', 'ガ': 'ga', 'キ': 'ki', 'ギ': 'gi', 'ク': 'ku', 'グ': 'gu', 'ケ': 'ke', 'ゲ': 'ge', 'コ': 'ko', 'ゴ': 'go',
-      'サ': 'sa', 'ザ': 'za', 'シ': 'ɕi', 'ジ': 'ʥi', 'ス': 'su', 'ズ': 'zu', 'セ': 'se', 'ゼ': 'ze', 'ソ': 'so', 'ゾ': 'zo',
-      'タ': 'ta', 'ダ': 'da', 'チ': 'ʨi', 'ヂ': 'ʥi', 'ツ': 'ʦu', 'ヅ': 'zu', 'テ': 'te', 'デ': 'de', 'ト': 'to', 'ド': 'do',
-      'ナ': 'na', 'ニ': 'ni', 'ヌ': 'nu', 'ネ': 'ne', 'ノ': 'no',
-      'ハ': 'ha', 'バ': 'ba', 'パ': 'pa', 'ヒ': 'hi', 'ビ': 'bi', 'ピ': 'pi', 'フ': 'fu', 'ブ': 'bu', 'プ': 'pu',
-      'ヘ': 'he', 'ベ': 'be', 'ペ': 'pe', 'ホ': 'ho', 'ボ': 'bo', 'ポ': 'po',
-      'マ': 'ma', 'ミ': 'mi', 'ム': 'mu', 'メ': 'me', 'モ': 'mo',
-      'ャ': 'ja', 'ヤ': 'ja', 'ュ': 'ju', 'ユ': 'ju', 'ョ': 'jo', 'ヨ': 'jo',
-      'ラ': 'ra', 'リ': 'ri', 'ル': 'ru', 'レ': 're', 'ロ': 'ro',
-      'ヮ': 'wa', 'ワ': 'wa', 'ヰ': 'i', 'ヱ': 'e', 'ヲ': 'o',
-      'ヴ': 'vu', 'ヵ': 'ka', 'ヶ': 'ke', 'ッ': 'ʔ', 'ン': 'ɴ', 'ー': 'ː',
-      // 拗音・特殊モーラ
-      'イェ': 'je', 'ウィ': 'wi', 'ウゥ': 'wu', 'ウェ': 'we', 'ウォ': 'wo',
-      'キャ': 'ᶄa', 'キュ': 'ᶄu', 'キョ': 'ᶄo', 'キィ': 'ᶄi', 'キェ': 'ᶄe',
-      'ギャ': 'ᶃa', 'ギュ': 'ᶃu', 'ギョ': 'ᶃo', 'ギィ': 'ᶃi', 'ギェ': 'ᶃe',
-      'クァ': 'Ka', 'クィ': 'Ki', 'クゥ': 'Ku', 'クェ': 'Ke', 'クォ': 'Ko',
-      'グァ': 'Ga', 'グィ': 'Gi', 'グゥ': 'Gu', 'グェ': 'Ge', 'グォ': 'Go',
-      'シャ': 'ɕa', 'シュ': 'ɕu', 'ショ': 'ɕo', 'シェ': 'ɕe',
-      'ジャ': 'ʥa', 'ジュ': 'ʥu', 'ジョ': 'ʥo', 'ジェ': 'ʥe',
-      'スィ': 'si', 'ズィ': 'zi',
-      'チャ': 'ʨa', 'チュ': 'ʨu', 'チョ': 'ʨo', 'チェ': 'ʨe',
-      'ヂャ': 'ʥa', 'ヂュ': 'ʥu', 'ヂョ': 'ʥo', 'ヂェ': 'ʥe',
-      'ツァ': 'ʦa', 'ツィ': 'ʦi', 'ツェ': 'ʦe', 'ツォ': 'ʦo',
-      'ティ': 'ti', 'テュ': 'ƫu', 'テェ': 'ƫe', 'テャ': 'ƫa', 'テョ': 'ƫo',
-      'ディ': 'di', 'デュ': 'ᶁu', 'デェ': 'ᶁe', 'デャ': 'ᶁa', 'デョ': 'ᶁo',
-      'トゥ': 'tu', 'ドゥ': 'du',
-      'ニャ': 'ɲa', 'ニュ': 'ɲu', 'ニョ': 'ɲo', 'ニィ': 'ɲi', 'ニェ': 'ɲe',
-      'ヒャ': 'ça', 'ヒュ': 'çu', 'ヒョ': 'ço', 'ヒィ': 'çi', 'ヒェ': 'çe',
-      'ビャ': 'ᶀa', 'ビュ': 'ᶀu', 'ビョ': 'ᶀo', 'ビィ': 'ᶀi', 'ビェ': 'ᶀe',
-      'ピャ': 'ᶈa', 'ピュ': 'ᶈu', 'ピョ': 'ᶈo', 'ピィ': 'ᶈi', 'ピェ': 'ᶈe',
-      'ファ': 'fa', 'フィ': 'fi', 'フェ': 'fe', 'フォ': 'fo',
-      'ミャ': 'ᶆa', 'ミュ': 'ᶆu', 'ミョ': 'ᶆo', 'ミィ': 'ᶆi', 'ミェ': 'ᶆe',
-      'リャ': 'ᶉa', 'リュ': 'ᶉu', 'リョ': 'ᶉo', 'リィ': 'ᶉi', 'リェ': 'ᶉe',
-      'ヴァ': 'va', 'ヴィ': 'vi', 'ヴェ': 've', 'ヴォ': 'vo',
-      'ヴャ': 'ᶀa', 'ヴュ': 'ᶀu', 'ヴョ': 'ᶀo'
-    };
-
-    const KOKORO_PUNCT_MAP = {
-      '、': ', ', '，': ', ', '。': '. ', '．': '. ', '！': '! ', '!': '! ', '？': '? ', '?': '? ',
-      '「': ' "', '」': '" ', '『': ' "', '』': '" ', '（': ' (', '）': ') ', '(': ' (', ')': ') ',
-      '：': ': ', '；': '; ', '　': ' ', ' ': ' ', '\n': ' '
-    };
-
-    // 頻出漢字・単語の軽量読み辞書（長い文字列を優先して置換）
-    const KANJI_ENTRIES = [
-      ['こんにちは', 'コンニチワ'],
-      ['こんばんは', 'コンバンワ'],
-      ['おはようございます', 'オハヨウゴザイマス'],
-      ['ありがとうございます', 'アリガトウゴザイマス'],
-      ['はじめまして', 'ハジメマシテ'],
-      ['よろしくおねがいします', 'ヨロシクオネガイシマス'],
-      ['よろしくお願いします', 'ヨロシクオネガイシマス'],
-      ['日本語', 'ニホンゴ'],
-      ['音声合成', 'オンセイゴウセイ'],
-      ['音声', 'オンセイ'],
-      ['合成', 'ゴウセイ'],
-      ['今日', 'キョウ'],
-      ['明日', 'アシタ'],
-      ['昨日', 'キノウ'],
-      ['今週', 'コンシュウ'],
-      ['来週', 'ライシュウ'],
-      ['先週', 'センシュウ'],
-      ['今年', 'コトシ'],
-      ['来年', 'ライネン'],
-      ['去年', 'キョネン'],
-      ['時間', 'ジカン'],
-      ['名前', 'ナマエ'],
-      ['学校', 'ガッコウ'],
-      ['会社', 'カイシャ'],
-      ['仕事', 'シゴト'],
-      ['先生', 'センセイ'],
-      ['友達', 'トモダチ'],
-      ['家族', 'カゾク'],
-      ['天気', 'テンキ'],
-      ['元気', 'ゲンキ'],
-      ['東京', 'トウキョウ'],
-      ['日本', 'ニホン'],
-      ['世界', 'セカイ'],
-      ['電車', 'デンシャ'],
-      ['自動車', 'ジドウシャ'],
-      ['飛行機', 'ヒコウキ'],
-      ['私', 'ワタシ'],
-      ['僕', 'ボク'],
-      ['俺', 'オレ'],
-      ['君', 'キミ'],
-      ['あなた', 'アナタ'],
-      ['彼', 'カレ'],
-      ['彼女', 'カノジョ'],
-      ['誰', 'ダレ'],
-      ['何', 'ナニ'],
-      ['どこ', 'ドコ'],
-      ['猫', 'ネコ'],
-      ['犬', 'イヌ'],
-      ['人', 'ヒト'],
-      ['本', 'ホン'],
-      ['車', 'クルマ'],
-      ['駅', 'エキ'],
-      ['手', 'テ'],
-      ['目', 'メ'],
-      ['口', 'クチ'],
-      ['耳', 'ミミ'],
-      ['心', 'ココロ'],
-      ['頭', 'アタマ'],
-      ['朝', 'アサ'],
-      ['昼', 'ヒル'],
-      ['夜', 'ヨル'],
-      ['今', 'イマ'],
-      ['前', 'マエ'],
-      ['後', 'アト'],
-      ['右', 'ミギ'],
-      ['左', 'ヒダリ'],
-      ['上', 'ウエ'],
-      ['下', 'シタ'],
-      ['中', 'ナカ'],
-      ['外', 'ソト'],
-      ['大', 'オオ'],
-      ['小', 'チイ'],
-      ['高', 'タカ'],
-      ['安', 'ヤス'],
-      ['新', 'アタラ'],
-      ['古', 'フル'],
-      ['良', 'イ'],
-      ['悪', 'ワル'],
-      ['多', 'オオ'],
-      ['少', 'スク'],
-      ['早', 'ハヤ'],
-      ['遅', 'オソ'],
-      ['食', 'タ'],
-      ['飲', 'ノ'],
-      ['見', 'ミ'],
-      ['聞', 'キ'],
-      ['言', 'イ'],
-      ['話', 'ハナ'],
-      ['読', 'ヨ'],
-      ['書', 'カ'],
-      ['行', 'イ'],
-      ['来', 'キ'],
-      ['帰', 'カエ'],
-      ['買', 'カ'],
-      ['売', 'ウ'],
-      ['作', 'ツク'],
-      ['使', 'ツカ'],
-      ['思', 'オモ'],
-      ['知', 'シ'],
-      ['分', 'ワカ'],
-      ['出', 'デ'],
-      ['入', 'ハイ']
-    ];
-
-    function hiraToKata(str) {
-      return str.replace(/[\u3041-\u3096]/g, ch => String.fromCharCode(ch.charCodeAt(0) + 0x60));
-    }
-
-    function numberToJapaneseKana(numStr) {
-      const digits = ['ゼロ', 'イチ', 'ニ', 'サン', 'ヨン', 'ゴ', 'ロク', 'ナナ', 'ハチ', 'キュウ'];
-      return numStr.replace(/\d+/g, (match) => {
-        const n = parseInt(match, 10);
-        if (isNaN(n)) return match;
-        if (n <= 10) {
-          if (n === 10) return 'ジュウ';
-          return digits[n];
-        }
-        if (n < 20) return 'ジュウ' + digits[n % 10];
-        if (n < 100) {
-          const ten = Math.floor(n / 10);
-          const one = n % 10;
-          return (ten === 1 ? '' : digits[ten]) + 'ジュウ' + (one === 0 ? '' : digits[one]);
-        }
-        return match.split('').map(d => digits[parseInt(d, 10)]).join('');
-      });
-    }
-
-    function katakanaToKokoroPhonemes(kata) {
-      let result = '';
-      let i = 0;
-      while (i < kata.length) {
-        const c1 = kata[i];
-        if (KOKORO_PUNCT_MAP[c1]) {
-          result += KOKORO_PUNCT_MAP[c1];
-          i++;
-          continue;
-        }
-        if (i + 1 < kata.length) {
-          const c2 = kata[i + 1];
-          if (KOKORO_M2P[c1 + c2]) {
-            result += KOKORO_M2P[c1 + c2];
-            i += 2;
-            continue;
-          }
-        }
-        if (KOKORO_M2P[c1]) {
-          result += KOKORO_M2P[c1];
-        } else if (/[a-zA-Z0-9 ]/.test(c1)) {
-          result += c1;
-        }
-        i++;
-      }
-      return result.replace(/\s+/g, ' ').trim();
-    }
-
-    // 日本語テキストを Kokoro 音素列（IPA）に高速変換（メインスレッドの負荷ゼロ）
-    function textToKokoroPhonemes(text) {
-      if (!text) return '';
-      
-      // 1. 数字を日本語読みに変換（例: "12" -> "ジュウニ"）
-      let processed = numberToJapaneseKana(text);
-
-      // 2. 助詞の「は」「へ」を発音通りに補正（「私は」->「私ワ」）
-      processed = processed.replace(/([^\s、。！？\n])は([\s、。！？\n]|$)/g, '$1ワ$2');
-      processed = processed.replace(/([^\s、。！？\n])へ([\s、。！？\n]|$)/g, '$1エ$2');
-
-      // 3. 頻出漢字・単語をカタカナに置換
-      for (let i = 0; i < KANJI_ENTRIES.length; i++) {
-        const [k, v] = KANJI_ENTRIES[i];
-        if (processed.includes(k)) {
-          processed = processed.replaceAll(k, v);
-        }
-      }
-
-      // 4. ひらがなをカタカナに変換
-      let kata = hiraToKata(processed);
-
-      // 5. カタカナ文字列を Kokoro 音素（IPA）に変換
-      return katakanaToKokoroPhonemes(kata);
-    }
-
-    // ==========================================
     //  共通ユーティリティ
     // ==========================================
 
-    // Kokoro 音声リスト（日本語音声5種類＋英語音声）
+    // Kokoro 音声リスト（英語専用・高品質モデル）
     const kokoroVoiceOptionsHtml = `
-      <optgroup label="🇯🇵 日本語音声">
-        <option value="jf_alpha" selected>🌸 日本語・女性1 (Alpha・落ち着いた声)</option>
-        <option value="jf_gongitsune">🦊 日本語・女性2 (ごんぎつね・明るい声)</option>
-        <option value="jf_nezumi">🐭 日本語・女性3 (ねずみ・可愛らしい声)</option>
-        <option value="jf_tebukuro">🧤 日本語・女性4 (手袋・優しい声)</option>
-        <option value="jm_kumo">🕷️ 日本語・男性 (蜘蛛・深みのある声)</option>
+      <optgroup label="🇺🇸 米国英語 (女性)">
+        <option value="af_heart" selected>🇺🇸 Heart (標準・最高品質)</option>
+        <option value="af_bella">🇺🇸 Bella</option>
+        <option value="af_nicole">🇺🇸 Nicole</option>
+        <option value="af_aoede">🇺🇸 Aoede</option>
+        <option value="af_kore">🇺🇸 Kore</option>
+        <option value="af_sarah">🇺🇸 Sarah</option>
+        <option value="af_nova">🇺🇸 Nova</option>
+        <option value="af_sky">🇺🇸 Sky (高め)</option>
+        <option value="af_alloy">🇺🇸 Alloy</option>
+        <option value="af_jessica">🇺🇸 Jessica</option>
+        <option value="af_river">🇺🇸 River</option>
       </optgroup>
-      <optgroup label="🇺🇸 米国英語">
-        <option value="af_heart">米国・女性1 (Heart)</option>
-        <option value="af_sky">米国・女性2 (Sky・高め)</option>
-        <option value="am_adam">米国・男性1 (Adam)</option>
-        <option value="am_onyx">米国・男性2 (Onyx・低め)</option>
+      <optgroup label="🇺🇸 米国英語 (男性)">
+        <option value="am_adam">🇺🇸 Adam</option>
+        <option value="am_echo">🇺🇸 Echo</option>
+        <option value="am_eric">🇺🇸 Eric</option>
+        <option value="am_fenrir">🇺🇸 Fenrir</option>
+        <option value="am_liam">🇺🇸 Liam</option>
+        <option value="am_michael">🇺🇸 Michael</option>
+        <option value="am_onyx">🇺🇸 Onyx (低め)</option>
+        <option value="am_puck">🇺🇸 Puck</option>
+        <option value="am_santa">🇺🇸 Santa</option>
       </optgroup>
-      <optgroup label="🇬🇧 英国英語">
-        <option value="bf_emma">英国・女性 (Emma)</option>
-        <option value="bm_george">英国・男性 (George)</option>
+      <optgroup label="🇬🇧 英国英語 (女性)">
+        <option value="bf_alice">🇬🇧 Alice</option>
+        <option value="bf_emma">🇬🇧 Emma</option>
+        <option value="bf_isabella">🇬🇧 Isabella</option>
+        <option value="bf_lily">🇬🇧 Lily</option>
+      </optgroup>
+      <optgroup label="🇬🇧 英国英語 (男性)">
+        <option value="bm_daniel">🇬🇧 Daniel</option>
+        <option value="bm_fable">🇬🇧 Fable</option>
+        <option value="bm_george">🇬🇧 George</option>
+        <option value="bm_lewis">🇬🇧 Lewis</option>
       </optgroup>
     `;
 
@@ -1261,7 +1048,7 @@
       let defaultVoice = voiceValue;
       if (engine === 'kokoro') {
         voiceHtml = kokoroVoiceOptionsHtml;
-        if (!defaultVoice) defaultVoice = 'jf_alpha';
+        if (!defaultVoice) defaultVoice = 'af_heart';
       } else if (engine === 'piper') {
         voiceHtml = window._piperDynamicVoiceHtml || piperVoiceOptionsHtml;
         if (!defaultVoice) defaultVoice = 'ja_JP-takumi-medium';
@@ -1618,7 +1405,7 @@
 
     // Kokoro: 対話ブロック初期化
     const kokoroDialogueContainer = document.getElementById('kokoroDialogueContainer');
-    kokoroDialogueContainer.appendChild(createDialogueBlock('kokoro', '', 'jf_alpha'));
+    kokoroDialogueContainer.appendChild(createDialogueBlock('kokoro', '', 'af_heart'));
     document.getElementById('kokoroAddBlockBtn').addEventListener('click', () => {
       kokoroDialogueContainer.appendChild(createDialogueBlock('kokoro'));
     });
@@ -1654,15 +1441,9 @@
             line = line.replace(/^\[?(US_F1|US_F2|US_M1|US_M2|UK_F|UK_M|JP_F1|JP_F2|JP_F3|JP_F4|JP_M1|Takumi|つくよみちゃん|女性|男性|話者[0-9]+)\]?[:：]\s*/i, '');
             if (!line) continue;
             
-            let genInput = line;
-            if (voiceId.startsWith('j')) {
-              kokoroStatusText.innerText = `日本語を音素解析中... (${displaySpeaker} - ブロック ${b + 1}/${blocks.length})`;
-              genInput = await textToKokoroPhonemes(line);
-            }
-
             kokoroStatusText.innerText = `音声生成中... (${displaySpeaker} - ブロック ${b + 1}/${blocks.length}, 行 ${i + 1}/${lines.length})`;
             
-            const result = await kokoroSynthesizer.generate(genInput, { voice: voiceId, speed: speedParam });
+            const result = await kokoroSynthesizer.generate(line, { voice: voiceId, speed: speedParam });
             
             if (!originalSampleRate) {
               originalSampleRate = result.sampling_rate;
