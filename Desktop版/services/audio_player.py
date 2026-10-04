@@ -23,6 +23,15 @@ class AudioPlayerService(QObject):
         self.player.setSource(url)
 
     def play(self):
+        dur = self.player.duration()
+        pos = self.player.position()
+        if dur > 0 and pos >= dur:
+            self.player.setPosition(0)
+        self.player.play()
+
+    def restart(self):
+        """最初から再生"""
+        self.player.setPosition(0)
         self.player.play()
 
     def pause(self):
@@ -30,6 +39,11 @@ class AudioPlayerService(QObject):
 
     def stop(self):
         self.player.stop()
+
+    def unload(self):
+        """再生を停止し、ファイル参照を完全に解放する"""
+        self.player.stop()
+        self.player.setSource(QUrl())
 
     def set_position(self, ms: int):
         self.player.setPosition(ms)

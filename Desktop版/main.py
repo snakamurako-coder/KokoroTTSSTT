@@ -16,6 +16,8 @@ def main():
     # Windows 高DPIスケール対応
     os.environ["QT_ENABLE_HIGHDPI_SCALING"] = "1"
     os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
+    # QtMultimedia の FFmpeg デバッグログ出力を抑制
+    os.environ["QT_LOGGING_RULES"] = "qt.multimedia.ffmpeg=false;qt.multimedia.*=false"
 
     app = QApplication(sys.argv)
     app.setApplicationName("KokoroTTSSTT-Desktop")

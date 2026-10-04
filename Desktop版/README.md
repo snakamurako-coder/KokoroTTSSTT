@@ -34,16 +34,22 @@ py -3 main.py
    * 外部モデルのダウンロード不要で、起動直後から即座に利用可能。
    * **Microsoft Haruka（日本語）**、**Microsoft Zira（英語）** 等を自動検出。
 
+* **🎛️ 音質コントロール & 多彩な保存形式**:
+  * **出力形式**: **WAV** (非圧縮・高音質)、**MP3** (軽量・高音質・汎用)、**WebM** (Opus高圧縮・Web標準) から選択可能！
+  * **サンプルレート**: 44.1 kHz (CD標準), 24.0 kHz (Kokoro標準), 22.05 kHz (Piper標準), 16.0 kHz (軽量)
+  * **チャンネル**: モノラル (1ch) / ステレオ (2ch)
+  * **ビットレート**: 64 kbps, 128 kbps (標準), 192 kbps (高音質), 256 kbps (最高品質)
 * **対話エディター (Dialogue Editor)**:
   * 複数ブロック（話者、音声、テキスト）を組み合わせた対話スクリプトの作成。
   * カーソル位置での「✂ 分割」や「✕ 削除」に対応。
-  * 連続合成し、無音ギャップ（0.3秒）を自動挿入して1つの高音質 WAV ファイルに結合。
+  * 連続合成し、無音ギャップ（0.3秒）を自動挿入して1つの指定フォーマット音声ファイルに結合。
 * **高音質プレイヤー**:
   * QtMultimedia (Direct WASAPI) による低遅延・高音質なプレビュー再生。
+  * WAV, MP3, WebM のすべてをネイティブ再生可能。
   * シークバーによる任意位置へのスキップ再生。
 * **ファイル保存 & Google Drive 連携**:
-  * ローカルへの WAV 書き出し。
-  * ワンクリックで Google Drive へアップロード＆スプレッドシート履歴に自動記録（GAS API 連携）。
+  * ローカルへの WAV / MP3 / WebM 書き出し。
+  * ワンクリックで Google Drive へアップロード＆スプレッドシート履歴に自動記録（GAS API 連携・指定形式対応）。
 
 ### 2. 🎙️ 音声認識 (STT Studio)
 * **Windows 11 Native WinRT 音声認識**:
@@ -65,5 +71,6 @@ py -3 main.py
 ## 🛠️ 開発環境情報
 * **OS**: Windows 11 (Snapdragon ARM64)
 * **GUIフレームワーク**: PySide6 (Qt 6.11.1)
+* **音声変換・エンコード**: `imageio-ffmpeg` (FFmpeg v7.1), `soundfile`
 * **TTSエンジン**: `kokoro-onnx` (ONNX Runtime), `piper-tts`, `pywin32` (SAPI)
 * **STTエンジン**: `winrt.windows.media.speechrecognition`, `SpeechRecognition`

@@ -1,8 +1,22 @@
 import os
+import re
+import unicodedata
 import wave
 import io
 from pathlib import Path
 from typing import List, Dict, Any, Optional
+
+CENTURY_MAP = {
+    '10': 'ten', '11': 'eleven', '12': 'twelve', '13': 'thirteen',
+    '14': 'fourteen', '15': 'fifteen', '16': 'sixteen', '17': 'seventeen',
+    '18': 'eighteen', '19': 'nineteen', '20': 'twenty', '21': 'twenty one'
+}
+
+DECADE_MAP = {
+    '00': 'hundreds', '10': 'tens', '20': 'twenties', '30': 'thirties',
+    '40': 'forties', '50': 'fifties', '60': 'sixties', '70': 'seventies',
+    '80': 'eighties', '90': 'nineties'
+}
 
 try:
     import win32com.client
@@ -24,6 +38,7 @@ except ImportError:
     HAS_KOKORO = False
 
 from services.model_manager import ModelManager
+from services.audio_converter import AudioConverter
 
 
 class TTSService:
@@ -39,22 +54,32 @@ class TTSService:
         self._piper_cache: Dict[str, Any] = {}
         self._kokoro_instance = None
 
+        # 起動時に過去の未保存一時ファイルを全自動廃棄
+        self.cleanup_output_dir()
+
+    def cleanup_output_dir(self):
+        """output ディレクトリ内の未保存・作業用音声ファイルを全削除（自動廃棄）"""
+        if not self.output_dir.exists():
+            return
+        for file in self.output_dir.iterdir():
+            if file.is_file() and file.name != ".gitkeep":
+                try:
+                    file.unlink()
+                except Exception:
+                    pass
+
     # -------------------------------------------------------------
     # ボイスリスト取得
     # -------------------------------------------------------------
     def get_voices_for_engine(self, engine: str) -> List[Dict[str, str]]:
         if engine == "kokoro":
             return [
-                {"id": "af_heart", "name": "🇺🇸 女性 (Heart・最高品質・標準)"},
+                {"id": "af", "name": "🇺🇸 女性 (Heart / Default・最高品質)"},
                 {"id": "af_bella", "name": "🇺🇸 女性 (Bella)"},
                 {"id": "af_nicole", "name": "🇺🇸 女性 (Nicole)"},
                 {"id": "af_sky", "name": "🇺🇸 女性 (Sky・高め)"},
                 {"id": "af_sarah", "name": "🇺🇸 女性 (Sarah)"},
-                {"id": "af_nova", "name": "🇺🇸 女性 (Nova)"},
                 {"id": "am_adam", "name": "🇺🇸 男性 (Adam・標準)"},
-                {"id": "am_echo", "name": "🇺🇸 男性 (Echo)"},
-                {"id": "am_eric", "name": "🇺🇸 男性 (Eric)"},
-                {"id": "am_onyx", "name": "🇺🇸 男性 (Onyx・低音)"},
                 {"id": "am_michael", "name": "🇺🇸 男性 (Michael)"},
                 {"id": "bf_emma", "name": "🇬🇧 女性 (Emma・英国)"},
                 {"id": "bf_isabella", "name": "🇬🇧 女性 (Isabella・英国)"},
@@ -105,16 +130,64 @@ class TTSService:
         self._kokoro_instance = Kokoro(str(model_path), str(voices_path))
         return self._kokoro_instance
 
-    def synthesize_kokoro(self, text: str, voice_name: str = "af_heart", speed: float = 1.0, output_path: Optional[str | Path] = None) -> Path:
+    def synthesize_kokoro(self, text: str, voice_name: str = "af", speed: float = 1.0, output_path: Optional[str | Path] = None) -> Path:
         kokoro = self.get_kokoro()
         if output_path is None:
             output_path = self.output_dir / f"kokoro_{os.urandom(4).hex()}.wav"
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        samples, sample_rate = kokoro.create(text, voice=voice_name, speed=speed, lang="en-us")
+        # エイリアス変換 & 安全なフォールバック
+        actual_voice = voice_name
+        if actual_voice == "af_heart" or not actual_voice:
+            actual_voice = "af"
+
+        available = kokoro.get_voices()
+        if actual_voice not in available:
+            actual_voice = "af" if "af" in available else available[0]
+
+        # 年代表記 (1980s, 1980's, '80s等) を自然な英語読み (nineteen eighties等) に事前正規化
+        processed_text = self.normalize_english_decades(text)
+
+        samples, sample_rate = kokoro.create(processed_text, voice=actual_voice, speed=speed, lang="en-us")
         sf.write(str(output_path), samples, sample_rate)
         return output_path
+
+    @staticmethod
+    def normalize_english_decades(text: str) -> str:
+        """
+        英語の年代表記 (例: 1980s, 1980's, '80s, '80's, 2000s 等) を
+        自然な発音 (例: nineteen eighties, eighties, two thousands 等) に事前正規化する。
+        Kokoro などのエンジンが末尾の s / 's を脱落させて年号 (1980) と誤読する現象を防ぐ。
+        """
+        if not text:
+            return text
+
+        # 全角数字・記号を半角に正規化
+        text = unicodedata.normalize('NFKC', text)
+
+        # 1. 4桁の年代: 1980s, 1980's, 1980s', 2000s, 2000's 等
+        def replace_4digit(m):
+            cent = m.group(1)
+            dec = m.group(2)
+            if cent == '20' and dec == '00':
+                return 'two thousands'
+            cent_word = CENTURY_MAP.get(cent, cent)
+            dec_word = DECADE_MAP.get(dec, dec + 's')
+            return f'{cent_word} {dec_word}'
+
+        text = re.sub(r'\b(1[0-9]|20|21)([0-9]0)[\'’]?[sS][\'’]?\b', replace_4digit, text)
+
+        # 2. 2桁の年代: '80s, '80's, 80s, 80's, 80s' 等
+        def replace_2digit(m):
+            dec = m.group(1)
+            if dec == '00':
+                return 'two thousands'
+            return DECADE_MAP.get(dec, dec + 's')
+
+        text = re.sub(r'(?:[\'’]|\b)([0-9]0)[\'’]?[sS][\'’]?\b', replace_2digit, text)
+
+        return text
 
     # -------------------------------------------------------------
     # ② Piper (日本語・英語・ローカルPiperVoice)
@@ -153,6 +226,9 @@ class TTSService:
             output_path = self.output_dir / f"piper_{os.urandom(4).hex()}.wav"
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        if model_key == "piper_en":
+            text = self.normalize_english_decades(text)
 
         voice = self.get_piper_voice(model_key)
         with wave.open(str(output_path), "wb") as wav_file:
@@ -195,15 +271,29 @@ class TTSService:
     # -------------------------------------------------------------
     # 対話台本の結合合成 (Dialogue Synthesize & Merge)
     # -------------------------------------------------------------
-    def synthesize_dialogue(self, blocks: List[Dict[str, Any]], engine: str = "sapi", speed: float = 1.0, silence_sec: float = 0.3, output_path: Optional[str | Path] = None) -> Path:
+    def synthesize_dialogue(
+        self,
+        blocks: List[Dict[str, Any]],
+        engine: str = "sapi",
+        speed: float = 1.0,
+        silence_sec: float = 0.3,
+        format_type: str = "wav",
+        sample_rate: int = 24000,
+        channels: int = 1,
+        bitrate_kbps: int = 128,
+        output_path: Optional[str | Path] = None
+    ) -> Path:
         if not blocks:
             raise ValueError("対話ブロックが空です")
 
+        ext = format_type.lower()
         if output_path is None:
-            output_path = self.output_dir / f"dialogue_{os.urandom(4).hex()}.wav"
+            output_path = self.output_dir / f"dialogue_{os.urandom(4).hex()}.{ext}"
         output_path = Path(output_path)
 
         temp_wavs: List[Path] = []
+        raw_combined_wav = self.output_dir / f"_temp_combined_{os.urandom(4).hex()}.wav"
+
         try:
             for i, b in enumerate(blocks):
                 text = b.get("text", "").strip()
@@ -226,16 +316,32 @@ class TTSService:
             if not temp_wavs:
                 raise ValueError("合成可能なテキストブロックがありませんでした")
 
-            # WAVファイルを結合
-            self.merge_wavs(temp_wavs, output_path, silence_sec=silence_sec)
+            # 1. まず一時結合WAVを生成
+            self.merge_wavs(temp_wavs, raw_combined_wav, silence_sec=silence_sec)
+
+            # 2. 指定されたフォーマット・サンプルレート・チャンネル・ビットレートへ変換
+            AudioConverter.convert(
+                input_wav=raw_combined_wav,
+                output_path=output_path,
+                format_type=format_type,
+                sample_rate=sample_rate,
+                channels=channels,
+                bitrate_kbps=bitrate_kbps
+            )
 
         finally:
+            # 一時ファイルの削除
             for p in temp_wavs:
                 try:
                     if p.exists():
                         p.unlink()
                 except Exception:
                     pass
+            try:
+                if raw_combined_wav.exists():
+                    raw_combined_wav.unlink()
+            except Exception:
+                pass
 
         return output_path
 

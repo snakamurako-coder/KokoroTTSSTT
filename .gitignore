@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.env
+venv/
+env/
+.venv/
+
+# Desktop outputs (一時作業音声ファイル)
+Desktop版/output/*
+!Desktop版/output/.gitkeep
+
+# AI models (大容量バイナリ)
+Desktop版/models/*.onnx
+Desktop版/models/*.bin
+Desktop版/models/*.json
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

@@ -137,6 +137,7 @@
       font-weight: 700;
       margin-bottom: 30px;
       text-align: center;
+      background-clip: text;
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
@@ -231,6 +232,7 @@
       height: 8px;
       border-radius: 4px;
       margin-top: 16px;
+      appearance: none;
       -webkit-appearance: none;
     }
     progress::-webkit-progress-bar { background: var(--input-bg); border-radius: 4px; }
@@ -302,7 +304,11 @@
     
     /* Range Slider */
     input[type=range] {
-      -webkit-appearance: none; width: 100%; background: transparent; margin: 12px 0;
+      appearance: none;
+      -webkit-appearance: none;
+      width: 100%;
+      background: transparent;
+      margin: 12px 0;
     }
     input[type=range]::-webkit-slider-runnable-track {
       width: 100%; height: 6px; cursor: pointer; background: rgba(255,255,255,0.1); border-radius: 4px;
@@ -1330,6 +1336,41 @@
     // ==========================================
     //  KOKORO ENGINE
     // ==========================================
+    // Kokoro: 英語の年代表記 (1980s, 1980's, '80s等) を自然な読み (nineteen eighties等) に事前正規化
+    const KOKORO_CENTURY_MAP = {
+      '10': 'ten', '11': 'eleven', '12': 'twelve', '13': 'thirteen',
+      '14': 'fourteen', '15': 'fifteen', '16': 'sixteen', '17': 'seventeen',
+      '18': 'eighteen', '19': 'nineteen', '20': 'twenty', '21': 'twenty one'
+    };
+
+    const KOKORO_DECADE_MAP = {
+      '00': 'hundreds', '10': 'tens', '20': 'twenties', '30': 'thirties',
+      '40': 'forties', '50': 'fifties', '60': 'sixties', '70': 'seventies',
+      '80': 'eighties', '90': 'nineties'
+    };
+
+    function normalizeDecadesForKokoro(text) {
+      if (!text) return text;
+      // 全角数字や記号を半角に正規化
+      let t = text.normalize('NFKC');
+
+      // 1. 4桁の年代: 1980s, 1980's, 1980s', 2000s 等
+      t = t.replace(/\b(1[0-9]|20|21)([0-9]0)['’]?[sS]['’]?\b/g, (match, cent, dec) => {
+        if (cent === '20' && dec === '00') return 'two thousands';
+        const centWord = KOKORO_CENTURY_MAP[cent] || cent;
+        const decWord = KOKORO_DECADE_MAP[dec] || (dec + 's');
+        return `${centWord} ${decWord}`;
+      });
+
+      // 2. 2桁の年代: '80s, '80's, 80s, 80's, 80s' 等
+      t = t.replace(/(?:['’]|\b)([0-9]0)['’]?[sS]['’]?\b/g, (match, dec) => {
+        if (dec === '00') return 'two thousands';
+        return KOKORO_DECADE_MAP[dec] || (dec + 's');
+      });
+
+      return t;
+    }
+
     const kokoroDownloadBtn = document.getElementById('kokoroDownloadBtn');
     const kokoroGenerateBtn = document.getElementById('kokoroGenerateBtn');
     const kokoroProgressBar = document.getElementById('kokoroProgressBar');
@@ -1443,6 +1484,9 @@
             
             line = line.replace(/^\[?(US_F1|US_F2|US_M1|US_M2|UK_F|UK_M|JP_F1|JP_F2|JP_F3|JP_F4|JP_M1|Takumi|つくよみちゃん|女性|男性|話者[0-9]+)\]?[:：]\s*/i, '');
             if (!line) continue;
+            
+            // 年代表記 (1980s, 1980's, '80s等) を自然な英語読み (nineteen eighties等) に事前正規化
+            line = normalizeDecadesForKokoro(line);
             
             kokoroStatusText.innerText = `音声生成中... (${displaySpeaker} - ブロック ${b + 1}/${blocks.length}, 行 ${i + 1}/${lines.length})`;
             

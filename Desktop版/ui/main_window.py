@@ -53,3 +53,9 @@ class MainWindow(QMainWindow):
         """STTから送られたテキストをTTSに追加し、TTSタブへ自動切り替え"""
         self.tts_page.insert_external_text(text)
         self.tabs.setCurrentIndex(0)
+
+    def closeEvent(self, event):
+        """アプリ終了時に未保存の一時音声ファイルをすべて自動破棄"""
+        if hasattr(self, "tts_page"):
+            self.tts_page.cleanup()
+        event.accept()

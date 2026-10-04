@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QTextEdit, QLineEdit, QComboBox, QSlider, QScrollArea,
     QFileDialog, QMessageBox, QGroupBox, QFrame, QDialog,
-    QProgressBar
+    QProgressBar, QCheckBox, QStyle, QStyleOptionSlider
 )
 from PySide6.QtCore import Qt, Signal
 from services.tts_service import TTSService
@@ -13,12 +13,60 @@ from services.model_manager import ModelManager, ModelDownloadWorker
 from core.gas_client import GASClient
 
 
+class SeekSlider(QSlider):
+    """クリック位置へ即座にジャンプ＆ドラッグ可能なシークバー"""
+    def __init__(self, orientation=Qt.Orientation.Horizontal, parent=None):
+        super().__init__(orientation, parent)
+        self.setTracking(True)
+        self.setCursor(Qt.PointingHandCursor)
+
+    def _val_from_pos(self, x: float) -> int:
+        opt = QStyleOptionSlider()
+        self.initStyleOption(opt)
+        handle_rect = self.style().subControlRect(
+            QStyle.ComplexControl.CC_Slider, opt, QStyle.SubControl.SC_SliderHandle, self
+        )
+        hw = handle_rect.width()
+        span = max(1, self.width() - hw)
+        pos = int(x - hw / 2)
+        val = QStyle.sliderValueFromPosition(self.minimum(), self.maximum(), pos, span)
+        return max(self.minimum(), min(self.maximum(), val))
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton and self.maximum() > self.minimum() and self.isEnabled():
+            val = self._val_from_pos(event.position().x())
+            self.setValue(val)
+            self.sliderMoved.emit(val)
+            self.setSliderDown(True)
+            event.accept()
+            return
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if self.isSliderDown() and (event.buttons() & Qt.MouseButton.LeftButton):
+            val = self._val_from_pos(event.position().x())
+            self.setValue(val)
+            self.sliderMoved.emit(val)
+            event.accept()
+            return
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if self.isSliderDown():
+            val = self._val_from_pos(event.position().x())
+            self.setValue(val)
+            self.setSliderDown(False)
+            event.accept()
+            return
+        super().mouseReleaseEvent(event)
+
+
 class ModelDownloadDialog(QDialog):
     """モデルダウンロード進行ダイアログ"""
     def __init__(self, model_key: str, models_dir: Path, parent=None):
         super().__init__(parent)
         self.setWindowTitle("AI音声モデルのダウンロード")
-        self.setFixedSize(440, 180)
+        self.setFixedSize(450, 185)
         self.setStyleSheet("background-color: #0f172a; color: #f8fafc;")
 
         layout = QVBoxLayout(self)
@@ -145,6 +193,10 @@ class DialogueBlockWidget(QFrame):
             idx = self.voice_combo.findData(target)
             if idx >= 0:
                 self.voice_combo.setCurrentIndex(idx)
+            elif self.voice_combo.count() > 0:
+                self.voice_combo.setCurrentIndex(0)
+        elif self.voice_combo.count() > 0:
+            self.voice_combo.setCurrentIndex(0)
 
     def _on_split(self):
         cursor = self.text_edit.textCursor()
@@ -161,7 +213,7 @@ class DialogueBlockWidget(QFrame):
 
 
 class TTSPage(QWidget):
-    """TTS (音声合成) 画面: Kokoro, Piper, SAPI"""
+    """TTS (音声合成) 画面: Kokoro, Piper, SAPI (音質コントロール & WAV/MP3/WebM保存対応)"""
     def __init__(self, config_manager, parent=None):
         super().__init__(parent)
         self.cfg = config_manager
@@ -181,40 +233,100 @@ class TTSPage(QWidget):
     def _init_ui(self):
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(16, 16, 16, 16)
-        main_layout.setSpacing(14)
+        main_layout.setSpacing(12)
 
         # ===== 上部設定パネル =====
-        settings_group = QGroupBox("⚙ 音声エンジン & パラメーター設定")
-        set_layout = QHBoxLayout(settings_group)
-        set_layout.setSpacing(16)
+        settings_group = QGroupBox("⚙ 音声エンジン & フォーマット設定")
+        set_layout = QVBoxLayout(settings_group)
+        set_layout.setSpacing(10)
 
-        # エンジン選択
+        # 1行目: エンジン・フォーマット・速度
+        row1 = QHBoxLayout()
+        row1.setSpacing(14)
+
         self.engine_combo = QComboBox()
         self.engine_combo.addItem("🎵 Kokoro (英語専用・最高品質 AI)", "kokoro")
         self.engine_combo.addItem("⚡ Piper (日本語/英語・高速ローカル AI)", "piper")
         self.engine_combo.addItem("🔊 Windows SAPI (標準搭載・即座利用)", "sapi")
-        self.engine_combo.setFixedWidth(290)
+        self.engine_combo.setFixedWidth(280)
         self.engine_combo.currentIndexChanged.connect(self._on_engine_changed)
 
-        # モデルDLボタン (必要な場合のみ表示)
         self.download_model_btn = QPushButton("⬇ モデルDL")
         self.download_model_btn.setProperty("class", "teal")
-        self.download_model_btn.setFixedWidth(100)
+        self.download_model_btn.setFixedWidth(95)
         self.download_model_btn.setVisible(False)
         self.download_model_btn.clicked.connect(self._on_download_model)
 
-        # 速度スライダー (0.5x 〜 2.0x)
+        self.format_combo = QComboBox()
+        self.format_combo.addItem("WAV (高音質・非圧縮)", "wav")
+        self.format_combo.addItem("MP3 (軽量・高音質・汎用)", "mp3")
+        self.format_combo.addItem("WebM (Opus高圧縮・Web標準)", "webm")
+        self.format_combo.setFixedWidth(210)
+        self.format_combo.currentIndexChanged.connect(self._on_format_changed)
+
         self.speed_slider = QSlider(Qt.Horizontal)
         self.speed_slider.setRange(5, 20)
         self.speed_slider.setValue(10)
         self.speed_label = QLabel("速度: 1.0x")
         self.speed_slider.valueChanged.connect(lambda v: self.speed_label.setText(f"速度: {v/10.0:.1f}x"))
 
-        set_layout.addWidget(QLabel("エンジン:"))
-        set_layout.addWidget(self.engine_combo)
-        set_layout.addWidget(self.download_model_btn)
-        set_layout.addWidget(self.speed_label)
-        set_layout.addWidget(self.speed_slider)
+        row1.addWidget(QLabel("エンジン:"))
+        row1.addWidget(self.engine_combo)
+        row1.addWidget(self.download_model_btn)
+        row1.addWidget(QLabel("形式:"))
+        row1.addWidget(self.format_combo)
+        row1.addWidget(self.speed_label)
+        row1.addWidget(self.speed_slider, 1)
+        set_layout.addLayout(row1)
+
+        # 2行目: 詳細音質パラメーター (トグル開閉)
+        self.advanced_check = QCheckBox("詳細パラメーター (音質・チャンネル・ビットレート) を設定")
+        self.advanced_check.setStyleSheet("color: #a78bfa; font-weight: bold; font-size: 12px;")
+        self.advanced_check.toggled.connect(self._toggle_advanced_settings)
+        set_layout.addWidget(self.advanced_check)
+
+        self.advanced_frame = QFrame()
+        self.advanced_frame.setStyleSheet("""
+            QFrame {
+                background: rgba(15, 23, 42, 0.6);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 8px;
+                padding: 6px;
+            }
+        """)
+        self.advanced_frame.setVisible(False)
+        adv_layout = QHBoxLayout(self.advanced_frame)
+        adv_layout.setSpacing(16)
+
+        # サンプルレート
+        self.sr_combo = QComboBox()
+        self.sr_combo.addItem("44.1 kHz (高音質CD標準)", 44100)
+        self.sr_combo.addItem("24.0 kHz (Kokoro標準)", 24000)
+        self.sr_combo.addItem("22.05 kHz (Piper標準)", 22050)
+        self.sr_combo.addItem("16.0 kHz (軽量・音声標準)", 16000)
+        self.sr_combo.setCurrentIndex(1) # 24kHz
+
+        # チャンネル
+        self.ch_combo = QComboBox()
+        self.ch_combo.addItem("モノラル (1ch)", 1)
+        self.ch_combo.addItem("ステレオ (2ch)", 2)
+
+        # ビットレート (MP3 / WebM用)
+        self.br_combo = QComboBox()
+        self.br_combo.addItem("192 kbps (高音質)", 192)
+        self.br_combo.addItem("128 kbps (標準・推奨)", 128)
+        self.br_combo.addItem("256 kbps (最高品質)", 256)
+        self.br_combo.addItem("64 kbps (超軽量)", 64)
+        self.br_combo.setCurrentIndex(1) # 128 kbps
+
+        adv_layout.addWidget(QLabel("サンプルレート:"))
+        adv_layout.addWidget(self.sr_combo)
+        adv_layout.addWidget(QLabel("チャンネル:"))
+        adv_layout.addWidget(self.ch_combo)
+        adv_layout.addWidget(QLabel("ビットレート:"))
+        adv_layout.addWidget(self.br_combo)
+        set_layout.addWidget(self.advanced_frame)
+
         main_layout.addWidget(settings_group)
 
         # ===== エンジン別ヒントバナー =====
@@ -262,7 +374,7 @@ class TTSPage(QWidget):
         self.generate_btn.setFixedHeight(44)
         self.generate_btn.clicked.connect(self._on_generate)
 
-        self.save_pc_btn = QPushButton("💾 パソコンに保存 (WAV)")
+        self.save_pc_btn = QPushButton("💾 パソコンに保存 (.wav)")
         self.save_pc_btn.setProperty("class", "secondary")
         self.save_pc_btn.setFixedHeight(44)
         self.save_pc_btn.setEnabled(False)
@@ -282,17 +394,23 @@ class TTSPage(QWidget):
         # ===== 音声プレイヤー =====
         player_group = QGroupBox("🎧 再生プレイヤー")
         player_layout = QHBoxLayout(player_group)
-        player_layout.setSpacing(12)
+        player_layout.setSpacing(10)
+
+        self.restart_btn = QPushButton("⏮ 最初から")
+        self.restart_btn.setProperty("class", "secondary")
+        self.restart_btn.setFixedWidth(95)
+        self.restart_btn.setEnabled(False)
+        self.restart_btn.setToolTip("音声を最初から再生します")
+        self.restart_btn.clicked.connect(self._on_restart_play)
 
         self.play_btn = QPushButton("▶ 再生")
         self.play_btn.setFixedWidth(90)
         self.play_btn.setEnabled(False)
         self.play_btn.clicked.connect(self._on_toggle_play)
 
-        self.seek_slider = QSlider(Qt.Horizontal)
+        self.seek_slider = SeekSlider(Qt.Orientation.Horizontal)
         self.seek_slider.setRange(0, 0)
         self.seek_slider.setEnabled(False)
-        self.seek_slider.sliderMoved.connect(self.player.set_position)
 
         self.time_label = QLabel("00:00 / 00:00")
         self.time_label.setFixedWidth(95)
@@ -301,6 +419,7 @@ class TTSPage(QWidget):
         self.status_label = QLabel("待機中")
         self.status_label.setStyleSheet("color: #94a3b8; font-size: 12px;")
 
+        player_layout.addWidget(self.restart_btn)
         player_layout.addWidget(self.play_btn)
         player_layout.addWidget(self.seek_slider, 1)
         player_layout.addWidget(self.time_label)
@@ -314,16 +433,24 @@ class TTSPage(QWidget):
         self.player.position_changed.connect(self._on_position_changed)
         self.player.duration_changed.connect(self._on_duration_changed)
         self.player.state_changed.connect(self._on_state_changed)
+        self.seek_slider.sliderMoved.connect(self._on_slider_moved)
+        self.seek_slider.sliderPressed.connect(self._on_slider_pressed)
+        self.seek_slider.sliderReleased.connect(self._on_slider_released)
+
+    def _toggle_advanced_settings(self, checked):
+        self.advanced_frame.setVisible(checked)
+
+    def _on_format_changed(self):
+        ext = self.format_combo.currentData()
+        self.save_pc_btn.setText(f"💾 パソコンに保存 (.{ext})")
 
     def _on_engine_changed(self):
         engine = self.engine_combo.currentData()
         voices = self.tts.get_voices_for_engine(engine)
         
-        # 既存ブロックのボイス一覧を同期更新
         for b in self.blocks:
             b.set_voices(voices)
 
-        # ヒント文とモデルダウンロードボタンの表示判定
         if engine == "kokoro":
             installed = self.tts.model_manager.is_model_installed("kokoro_en")
             self.download_model_btn.setVisible(not installed)
@@ -417,7 +544,11 @@ class TTSPage(QWidget):
             return
 
         engine = self.engine_combo.currentData()
+        format_type = self.format_combo.currentData()
         speed_factor = self.speed_slider.value() / 10.0
+        sample_rate = self.sr_combo.currentData()
+        channels = self.ch_combo.currentData()
+        bitrate_kbps = self.br_combo.currentData()
 
         # モデル有無の事前チェック
         if engine == "kokoro" and not self.tts.model_manager.is_model_installed("kokoro_en"):
@@ -430,16 +561,34 @@ class TTSPage(QWidget):
                     QMessageBox.warning(self, "モデル未ダウンロード", f"Piper モデル ({m_key}) がダウンロードされていません。「⬇ モデルDL」ボタンからダウンロードしてください。")
                     return
 
-        self.status_label.setText("⏳ 音声を合成中...")
+        self.status_label.setText(f"⏳ 音声を合成＆ {format_type.upper()} にエンコード中...")
         self.generate_btn.setEnabled(False)
 
+        # 前回の未保存一時音声があれば破棄
+        if self.current_audio_path and self.current_audio_path.exists():
+            try:
+                self.player.unload()
+                self.current_audio_path.unlink()
+            except Exception:
+                pass
+            self.current_audio_path = None
+
         try:
-            out_path = self.tts.synthesize_dialogue(block_data, engine=engine, speed=speed_factor)
+            out_path = self.tts.synthesize_dialogue(
+                block_data,
+                engine=engine,
+                speed=speed_factor,
+                format_type=format_type,
+                sample_rate=sample_rate,
+                channels=channels,
+                bitrate_kbps=bitrate_kbps
+            )
             self.current_audio_path = out_path
             self.player.load(out_path)
             
-            self.status_label.setText(f"✅ 合成完了: {out_path.name}")
+            self.status_label.setText(f"✅ 合成・エンコード完了: {out_path.name} ({sample_rate}Hz, {channels}ch, {bitrate_kbps}kbps)")
             self.play_btn.setEnabled(True)
+            self.restart_btn.setEnabled(True)
             self.seek_slider.setEnabled(True)
             self.save_pc_btn.setEnabled(True)
             self.save_drive_btn.setEnabled(True)
@@ -454,7 +603,9 @@ class TTSPage(QWidget):
     def _on_save_pc(self):
         if not self.current_audio_path or not self.current_audio_path.exists():
             return
-        save_path, _ = QFileDialog.getSaveFileName(self, "音声を保存", f"speech_{self.current_audio_path.name}", "WAVファイル (*.wav)")
+        ext = self.format_combo.currentData()
+        filter_str = f"{ext.upper()}ファイル (*.{ext})"
+        save_path, _ = QFileDialog.getSaveFileName(self, "音声を保存", f"speech_{self.current_audio_path.name}", filter_str)
         if save_path:
             import shutil
             shutil.copy2(self.current_audio_path, save_path)
@@ -464,26 +615,37 @@ class TTSPage(QWidget):
         if not self.current_audio_path or not self.current_audio_path.exists():
             return
 
+        ext = self.format_combo.currentData()
+        sr = self.sr_combo.currentData()
+        ch = "ステレオ" if self.ch_combo.currentData() == 2 else "モノラル"
+        br = self.br_combo.currentData()
+        
         full_text = "\n".join([f"[{b.get_data()['speaker'] or '話者'}] {b.get_data()['text']}" for b in self.blocks if b.get_data()['text']])
         voice_info = f"Desktop ({self.engine_combo.currentText()})"
+        settings_info = f"エンジン: {self.engine_combo.currentText()}, 形式: {ext.upper()}, SR: {sr}Hz, チャンネル: {ch}, BR: {br}kbps"
 
         self.status_label.setText("☁ Google Drive にアップロード中...")
         self.save_drive_btn.setEnabled(False)
 
-        res = self.gas.upload_audio(self.current_audio_path, full_text, voice_info)
+        res = self.gas.upload_audio(self.current_audio_path, full_text, voice_info, settings=settings_info)
         self.save_drive_btn.setEnabled(True)
 
         if res.get("status") == "success":
             url = res.get("url", "")
-            msg = "✅ Google Drive に正常に保存されました！"
+            msg = f"✅ Google Drive に正常に保存されました！ (形式: {ext.upper()})"
             if url:
                 msg += f"\n\nURL: {url}"
             QMessageBox.information(self, "Google Drive 保存完了", msg)
-            self.status_label.setText("✅ Google Drive 保存完了！")
+            self.status_label.setText(f"✅ Google Drive 保存完了！ ({ext.upper()})")
         else:
             err = res.get("message", "不明なエラー")
             QMessageBox.critical(self, "保存失敗", f"Google Driveへの保存に失敗しました:\n{err}")
             self.status_label.setText(f"❌ Google Drive 保存失敗: {err}")
+
+    def _on_restart_play(self):
+        self.player.restart()
+        self.seek_slider.setValue(0)
+        self._update_time_label(0, self.seek_slider.maximum())
 
     def _on_toggle_play(self):
         if self.player.is_playing():
@@ -501,7 +663,24 @@ class TTSPage(QWidget):
     def _on_position_changed(self, pos_ms):
         if not self.seek_slider.isSliderDown():
             self.seek_slider.setValue(pos_ms)
+            self._update_time_label(pos_ms, self.seek_slider.maximum())
+
+    def _on_slider_moved(self, pos_ms):
         self._update_time_label(pos_ms, self.seek_slider.maximum())
+
+    def _on_slider_pressed(self):
+        self._was_playing_before_seek = self.player.is_playing()
+        if self._was_playing_before_seek:
+            self.player.pause()
+        self.player.set_position(self.seek_slider.value())
+        self._update_time_label(self.seek_slider.value(), self.seek_slider.maximum())
+
+    def _on_slider_released(self):
+        self.player.set_position(self.seek_slider.value())
+        self._update_time_label(self.seek_slider.value(), self.seek_slider.maximum())
+        if getattr(self, "_was_playing_before_seek", False):
+            self.player.play()
+            self._was_playing_before_seek = False
 
     def _update_time_label(self, cur_ms, total_ms):
         cur_sec = cur_ms // 1000
@@ -510,3 +689,12 @@ class TTSPage(QWidget):
 
     def insert_external_text(self, text: str):
         self.add_block(text=text)
+
+    def cleanup(self):
+        """アプリ終了時等に未保存の一時音声ファイルをすべて破棄"""
+        try:
+            self.player.unload()
+        except Exception:
+            pass
+        self.tts.cleanup_output_dir()
+        self.current_audio_path = None
