@@ -20,10 +20,20 @@ py -3 main.py
 ## ✨ 主な機能
 
 ### 1. 🎵 音声合成 (TTS Studio)
-* **Windows SAPI 音声合成**:
-  * 外部モデルのダウンロード不要で、起動直後から即座に利用可能。
-  * **Microsoft Haruka (日本語)**、**Microsoft Zira (英語)** など、OS内蔵の自然な音声を自動検出して使用。
-  * 速度・音量の細かい調整対応。
+以下の3つのエンジンをタブ内で自由に切り替えて使用できます：
+
+1. **🎵 Kokoro (英語専用・最高品質 AI)**:
+   * ローカルの ONNX Runtime CPU で動く高精度ニューラル音声合成。
+   * Heart, Bella, Sky, Adam, Onyx, Emma 等の多彩な高品質英語ボイスを完全サポート。
+   * 初回利用時は画面上の「⬇ モデルDL」ボタンからワンクリックでモデルを取得可能。
+2. **⚡ Piper (日本語 / 英語・高速ローカル AI)**:
+   * 外部サーバー不要で Python 内で直接 `PiperVoice` エンジンをローカル駆動。
+   * **日本語（Hi-Fi Captain）** および **英語（Lessac）** の高品質ローカル推論。
+   * 初回利用時は「⬇ モデルDL」ボタンからワンクリックでモデルを取得可能。
+3. **🔊 Windows SAPI (OS標準搭載・即座利用)**:
+   * 外部モデルのダウンロード不要で、起動直後から即座に利用可能。
+   * **Microsoft Haruka（日本語）**、**Microsoft Zira（英語）** 等を自動検出。
+
 * **対話エディター (Dialogue Editor)**:
   * 複数ブロック（話者、音声、テキスト）を組み合わせた対話スクリプトの作成。
   * カーソル位置での「✂ 分割」や「✕ 削除」に対応。
@@ -38,7 +48,7 @@ py -3 main.py
 ### 2. 🎙️ 音声認識 (STT Studio)
 * **Windows 11 Native WinRT 音声認識**:
   * Snapdragon Copilot+ PC に最適化された Windows 11 標準オフライン音声認識 API を採用。
-  * マイクに向かって話すだけで、リアルタイム・高精度にテキストへ変換。
+  * マイクに向かって話すだけで、完全オフライン・高精度にテキストへ変換。
 * **音声ファイルからの文字起こし**:
   * 録音済み WAV ファイルを選択して一括文字起こし。
 * **テキスト活用 & TTS連携**:
@@ -55,5 +65,5 @@ py -3 main.py
 ## 🛠️ 開発環境情報
 * **OS**: Windows 11 (Snapdragon ARM64)
 * **GUIフレームワーク**: PySide6 (Qt 6.11.1)
-* **オーディオ**: QtMultimedia, Windows SAPI (pywin32), Piper-TTS
-* **音声認識**: WinRT SpeechRecognition, SpeechRecognition
+* **TTSエンジン**: `kokoro-onnx` (ONNX Runtime), `piper-tts`, `pywin32` (SAPI)
+* **STTエンジン**: `winrt.windows.media.speechrecognition`, `SpeechRecognition`
