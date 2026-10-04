@@ -1,0 +1,11 @@
+{
+  "gas_url": "https://script.google.com/a/macros/yamagataps.jp/s/AKfycbxmVamqNrYxfTYhR3JquN1mksZZqbzpY94qGm9BNJqlNnPZiGkj4-2XgwXfkraL2ytfgw/exec",
+  "default_engine": "sapi",
+  "default_sapi_voice": "Microsoft Haruka Desktop - Japanese",
+  "default_sapi_rate": 0,
+  "default_sapi_volume": 100,
+  "piper_model_dir": "models",
+  "piper_default_model": "en_US-lessac-medium",
+  "auto_save_drive": false,
+  "output_dir": "output"
+}
