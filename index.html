@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>TTS Studio - Kokoro / Piper / ブラウザTTS</title>
+  <title>TTS Studio - Kokoro / ブラウザTTS</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -28,16 +28,6 @@
       --kokoro-glow: rgba(236, 72, 153, 0.5);
       --kokoro-tab-bg: rgba(139, 92, 246, 0.15);
       --kokoro-tab-border: rgba(139, 92, 246, 0.4);
-
-      /* Piper theme (teal/cyan) */
-      --piper-primary: #14b8a6;
-      --piper-primary-hover: #0d9488;
-      --piper-accent: #06b6d4;
-      --piper-gradient: linear-gradient(to right, #5eead4, #67e8f9);
-      --piper-btn-gradient: linear-gradient(135deg, #14b8a6, #06b6d4);
-      --piper-glow: rgba(6, 182, 212, 0.5);
-      --piper-tab-bg: rgba(20, 184, 166, 0.15);
-      --piper-tab-border: rgba(20, 184, 166, 0.4);
 
       /* Browser TTS theme (amber/orange) */
       --browser-primary: #f59e0b;
@@ -113,12 +103,6 @@
       color: #c4b5fd;
       box-shadow: 0 0 20px rgba(139, 92, 246, 0.15);
     }
-    .tab-btn.active-piper {
-      background: var(--piper-tab-bg);
-      border-color: var(--piper-tab-border);
-      color: #99f6e4;
-      box-shadow: 0 0 20px rgba(20, 184, 166, 0.15);
-    }
     .tab-btn.active-browser {
       background: var(--browser-tab-bg);
       border-color: var(--browser-tab-border);
@@ -186,15 +170,11 @@
     .btn-kokoro { background: var(--kokoro-btn-gradient); }
     .btn-kokoro:hover:not(:disabled) { box-shadow: 0 0 15px var(--kokoro-glow); }
 
-    .btn-piper { background: var(--piper-btn-gradient); }
-    .btn-piper:hover:not(:disabled) { box-shadow: 0 0 15px var(--piper-glow); }
-
     .btn-browser { background: var(--browser-btn-gradient); }
     .btn-browser:hover:not(:disabled) { box-shadow: 0 0 15px var(--browser-glow); }
 
     /* ===== Themed Headings ===== */
     .heading-kokoro { background: var(--kokoro-gradient); }
-    .heading-piper { background: var(--piper-gradient); }
     .heading-browser { background: var(--browser-gradient); }
 
     /* ===== Themed Focus Rings ===== */
@@ -203,12 +183,6 @@
     [data-theme="kokoro"] textarea:focus {
       outline: none; border-color: var(--kokoro-primary);
       box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3);
-    }
-    [data-theme="piper"] input[type="text"]:focus,
-    [data-theme="piper"] select:focus,
-    [data-theme="piper"] textarea:focus {
-      outline: none; border-color: var(--piper-primary);
-      box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.3);
     }
     [data-theme="browser"] input[type="text"]:focus,
     [data-theme="browser"] select:focus,
@@ -238,7 +212,6 @@
     progress::-webkit-progress-bar { background: var(--input-bg); border-radius: 4px; }
 
     [data-theme="kokoro"] progress::-webkit-progress-value { background: var(--kokoro-primary); border-radius: 4px; }
-    [data-theme="piper"] progress::-webkit-progress-value { background: var(--piper-primary); border-radius: 4px; }
     [data-theme="browser"] progress::-webkit-progress-value { background: var(--browser-primary); border-radius: 4px; }
 
     .progress-text { margin-top: 12px; font-size: 0.9em; color: var(--text-muted); }
@@ -272,10 +245,6 @@
     [data-theme="kokoro"] .add-block-btn:hover {
       border-color: var(--kokoro-primary); color: var(--text-main);
       background: rgba(139, 92, 246, 0.1);
-    }
-    [data-theme="piper"] .add-block-btn:hover {
-      border-color: var(--piper-primary); color: var(--text-main);
-      background: rgba(20, 184, 166, 0.1);
     }
     [data-theme="browser"] .add-block-btn:hover {
       border-color: var(--browser-primary); color: var(--text-main);
@@ -318,10 +287,6 @@
       -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%;
       background: var(--kokoro-accent); cursor: pointer; margin-top: -8px; box-shadow: 0 0 10px var(--kokoro-accent);
     }
-    [data-theme="piper"] input[type=range]::-webkit-slider-thumb {
-      -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%;
-      background: var(--piper-accent); cursor: pointer; margin-top: -8px; box-shadow: 0 0 10px var(--piper-accent);
-    }
     [data-theme="browser"] input[type=range]::-webkit-slider-thumb {
       -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%;
       background: var(--browser-accent); cursor: pointer; margin-top: -8px; box-shadow: 0 0 10px var(--browser-accent);
@@ -331,7 +296,6 @@
       text-align: center; font-weight: 600; margin-top: 24px; min-height: 24px;
     }
     .status-kokoro { color: var(--kokoro-accent); }
-    .status-piper { color: var(--piper-accent); }
     .status-browser { color: var(--browser-accent); }
     
     /* Result Area */
@@ -352,8 +316,6 @@
     .download-link:hover { transform: translateY(-2px); }
     .dl-kokoro { background: var(--kokoro-btn-gradient); }
     .dl-kokoro:hover { box-shadow: 0 0 15px var(--kokoro-glow); }
-    .dl-piper { background: var(--piper-btn-gradient); }
-    .dl-piper:hover { box-shadow: 0 0 15px var(--piper-glow); }
     .dl-browser { background: var(--browser-btn-gradient); }
     .dl-browser:hover { box-shadow: 0 0 15px var(--browser-glow); }
 
@@ -363,22 +325,7 @@
       border-radius: 20px; margin-bottom: 16px; letter-spacing: 0.5px;
     }
     .badge-kokoro { background: rgba(139,92,246,0.2); color: #c4b5fd; border: 1px solid rgba(139,92,246,0.3); }
-    .badge-piper { background: rgba(20,184,166,0.2); color: #99f6e4; border: 1px solid rgba(20,184,166,0.3); }
     .badge-browser { background: rgba(245,158,11,0.2); color: #fde68a; border: 1px solid rgba(245,158,11,0.3); }
-
-    /* ===== Piper Server Config ===== */
-    .server-config {
-      display: flex; gap: 10px; align-items: center; margin-bottom: 12px;
-    }
-    .server-config input { flex: 1; }
-    .server-status-dot {
-      width: 10px; height: 10px; border-radius: 50%; display: inline-block;
-      margin-right: 6px; vertical-align: middle;
-    }
-    .dot-offline { background: #ef4444; box-shadow: 0 0 6px rgba(239,68,68,0.5); }
-    .dot-online { background: #10b981; box-shadow: 0 0 6px rgba(16,185,129,0.5); }
-    .dot-checking { background: #f59e0b; box-shadow: 0 0 6px rgba(245,158,11,0.5); animation: pulse 1s infinite; }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 
     /* Browser TTS specific */
     .browser-tts-note {
@@ -444,14 +391,6 @@
 
       .flex-row > div {
         min-width: 0;
-      }
-
-      .server-config {
-        flex-direction: column;
-      }
-
-      .server-config button {
-        width: 100%;
       }
     }
 
@@ -655,10 +594,6 @@
         <span class="tab-label">🎵 Kokoro</span>
         <span class="tab-sub">英語専用・最高峰</span>
       </button>
-      <button class="tab-btn" data-tab="piper" id="tabBtnPiper">
-        <span class="tab-label">⚡ Piper</span>
-        <span class="tab-sub">高速・多言語</span>
-      </button>
       <button class="tab-btn" data-tab="browser" id="tabBtnBrowser">
         <span class="tab-label">🌐 ブラウザTTS</span>
         <span class="tab-sub">日本語・即座利用</span>
@@ -683,7 +618,7 @@
         <label>対話エディター</label>
         <div class="hint">
           各入力欄ごとに話者を設定できます。「分割」を押すとカーソル位置で新しいブロックを作ります。<br>
-          <span style="color: #c4b5fd;">※ 英語専用エンジンです（日本語の読み上げには「⚡ Piper」または「🌐 ブラウザTTS」をご利用ください）。</span>
+          <span style="color: #c4b5fd;">※ 英語専用エンジンです（日本語の読み上げには「🌐 ブラウザTTS」をご利用ください）。</span>
         </div>
         
         <div id="kokoroDialogueContainer"></div>
@@ -755,100 +690,6 @@
     </div>
 
     <!-- ================================================================== -->
-    <!--  PIPER TAB                                                         -->
-    <!-- ================================================================== -->
-    <div class="tab-content" id="tab-piper" data-theme="piper">
-      <h2 class="heading-piper">⚡ Piper Studio</h2>
-      <div class="engine-badge badge-piper">⚡ 高速・軽量・英語/多言語 AI音声合成</div>
-
-      <div class="setup-area" id="piperSetupArea">
-        <p style="margin-top: 0;">Piper TTSサーバーに接続します</p>
-        <div class="server-config">
-          <input type="text" id="piperServerUrl" value="http://localhost:5000" placeholder="Piperサーバー URL">
-          <button id="piperConnectBtn" class="btn-piper" style="white-space: nowrap;">接続テスト</button>
-        </div>
-        <div class="progress-text" id="piperConnectionStatus">
-          <span class="server-status-dot dot-offline"></span> 未接続
-        </div>
-      </div>
-      
-      <div class="control-group" id="piperDialogueEditorGroup">
-        <label>対話エディター</label>
-        <div class="hint">
-          各入力欄ごとに話者を設定できます。「分割」を押すとカーソル位置で新しいブロックを作ります。<br>
-          <span style="color: #99f6e4;">※ 英語および各国語モデルに対応しています（日本語の読み上げには「🌐 ブラウザTTS」をご利用ください）。</span>
-        </div>
-        
-        <div id="piperDialogueContainer"></div>
-        <button class="add-block-btn" id="piperAddBlockBtn">+ 新しい入力欄を追加</button>
-      </div>
-
-      <div class="control-group">
-        <label>出力フォーマット</label>
-        <select id="piperOutputFormat">
-          <option value="wav">WAV (高音質・非圧縮)</option>
-          <option value="webm">WebM (標準・軽量)</option>
-          <option value="mp3">MP3 (汎用)</option>
-        </select>
-      </div>
-
-      <div style="margin-bottom: 24px;">
-        <label class="advanced-toggle">
-          <input type="checkbox" id="piperToggleAdvanced" style="width: auto; margin: 0;">
-          詳細パラメーターを表示
-        </label>
-        
-        <div id="piperAdvancedSettings" class="advanced-settings" style="display: none; flex-direction: column; gap: 16px;">
-          <div>
-            <label style="margin-bottom: 0;">読み上げ速度: <span id="piperSpeedDisplay" style="color: var(--piper-accent);">1.0</span>x</label>
-            <input type="range" id="piperSpeechSpeed" min="0.5" max="2.0" step="0.1" value="1.0">
-          </div>
-
-          <div class="flex-row">
-            <div>
-              <label>チャンネル</label>
-              <select id="piperChannel">
-                <option value="1">モノラル</option>
-                <option value="2">ステレオ</option>
-              </select>
-            </div>
-            <div>
-              <label>サンプルレート</label>
-              <select id="piperSampleRate">
-                <option value="22050">22.05kHz</option>
-                <option value="16000">16kHz</option>
-                <option value="24000">24kHz</option>
-              </select>
-            </div>
-            <div>
-              <label>ビットレート</label>
-              <select id="piperBitrate">
-                <option value="64000">64 kbps</option>
-                <option value="128000">128 kbps</option>
-                <option value="192000">192 kbps</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <button id="piperGenerateBtn" class="btn-piper" style="width: 100%; font-size: 1.1em; padding: 16px;" disabled>音声を生成する</button>
-      <div class="status-text status-piper" id="piperStatus"></div>
-
-      <div class="result-area" id="piperResultArea">
-        <h3 style="margin-top: 0; margin-bottom: 16px; color: #fff;">🎉 生成完了！</h3>
-        <audio id="piperAudioPlayer" controls></audio>
-        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-          <a id="piperDownloadLink" class="download-link dl-piper" href="#" download="speech.wav" style="flex: 1; min-width: 200px;">
-            パソコンに保存
-          </a>
-          <button id="piperSaveDriveBtn" class="btn-secondary" style="flex: 1; min-width: 200px; padding: 14px; margin-bottom: 12px;">Google Driveに保存</button>
-        </div>
-        <p id="piperDriveStatus" style="font-size: 0.9em; margin-top: 12px; text-align: center;"></p>
-      </div>
-    </div>
-
-    <!-- ================================================================== -->
     <!--  BROWSER TTS TAB                                                   -->
     <!-- ================================================================== -->
     <div class="tab-content" id="tab-browser" data-theme="browser">
@@ -916,7 +757,7 @@
 
     function switchTab(tabName) {
       tabButtons.forEach(btn => {
-        btn.classList.remove('active-kokoro', 'active-piper', 'active-browser');
+        btn.classList.remove('active-kokoro', 'active-browser');
         if (btn.dataset.tab === tabName) {
           btn.classList.add(`active-${tabName}`);
         }
@@ -974,28 +815,6 @@
         <option value="bm_fable">🇬🇧 Fable</option>
         <option value="bm_george">🇬🇧 George</option>
         <option value="bm_lewis">🇬🇧 Lewis</option>
-      </optgroup>
-    `;
-
-    // Piper 音声リスト（英語・多言語モデル）
-    const piperVoiceOptionsHtml = `
-      <optgroup label="🇺🇸 米国英語モデル">
-        <option value="en_US-lessac-medium" selected>英語 US - Lessac (Medium・標準)</option>
-        <option value="en_US-amy-medium">英語 US - Amy (Medium・女性)</option>
-        <option value="en_US-ryan-medium">英語 US - Ryan (Medium・男性)</option>
-        <option value="en_US-danny-low">英語 US - Danny (Low・軽量)</option>
-        <option value="en_US-joe-medium">英語 US - Joe (Medium)</option>
-        <option value="en_US-kristin-medium">英語 US - Kristin (Medium)</option>
-      </optgroup>
-      <optgroup label="🇬🇧 英国英語モデル">
-        <option value="en_GB-alan-medium">英語 UK - Alan (Medium・男性)</option>
-        <option value="en_GB-southern_english_female-low">英語 UK - 女性 (Low)</option>
-      </optgroup>
-      <optgroup label="🌐 その他の多言語モデル">
-        <option value="de_DE-thorsten-medium">ドイツ語 - Thorsten (Medium)</option>
-        <option value="fr_FR-upmc-medium">フランス語 - UPMC (Medium)</option>
-        <option value="es_ES-carlfm-medium">スペイン語 - Carlfm (Medium)</option>
-        <option value="zh_CN-huayan-medium">中国語 - Huayan (Medium)</option>
       </optgroup>
     `;
 
@@ -1058,9 +877,6 @@
       if (engine === 'kokoro') {
         voiceHtml = kokoroVoiceOptionsHtml;
         if (!defaultVoice) defaultVoice = 'af_heart';
-      } else if (engine === 'piper') {
-        voiceHtml = window._piperDynamicVoiceHtml || piperVoiceOptionsHtml;
-        if (!defaultVoice) defaultVoice = 'en_US-lessac-medium';
       } else if (engine === 'browser') {
         const bRes = getBrowserVoiceOptionsHtml(voiceValue !== '' && voiceValue !== null ? parseInt(voiceValue) : null);
         voiceHtml = bRes.html;
@@ -1565,218 +1381,6 @@
         document.getElementById('kokoroSampleRate'),
         document.getElementById('kokoroBitrate'),
         outputFormat, kokoroDriveStatus, kokoroSaveDriveBtn
-      );
-    });
-
-
-    // ==========================================
-    //  PIPER ENGINE
-    // ==========================================
-    const piperConnectBtn = document.getElementById('piperConnectBtn');
-    const piperGenerateBtn = document.getElementById('piperGenerateBtn');
-    const piperConnectionStatus = document.getElementById('piperConnectionStatus');
-    const piperStatusText = document.getElementById('piperStatus');
-    const piperResultArea = document.getElementById('piperResultArea');
-    const piperAudioPlayer = document.getElementById('piperAudioPlayer');
-    const piperDownloadLink = document.getElementById('piperDownloadLink');
-    const piperSaveDriveBtn = document.getElementById('piperSaveDriveBtn');
-    const piperDriveStatus = document.getElementById('piperDriveStatus');
-
-    let piperServerConnected = false;
-    let piperCurrentAudioBlob = null;
-
-    // Piper: 接続テスト
-    piperConnectBtn.addEventListener('click', async () => {
-      const serverUrl = document.getElementById('piperServerUrl').value.trim();
-      piperConnectionStatus.innerHTML = '<span class="server-status-dot dot-checking"></span> 接続テスト中...';
-      
-      try {
-        const res = await fetch(`${serverUrl}/api/voices`, { method: 'GET', signal: AbortSignal.timeout(5000) });
-        if (res.ok) {
-          const voices = await res.json();
-          piperServerConnected = true;
-          piperConnectionStatus.innerHTML = '<span class="server-status-dot dot-online"></span> 接続成功！';
-          piperGenerateBtn.disabled = false;
-
-          // サーバーからの音声リストで更新（日本語モデルは除外、英語・多言語モデルを整理）
-          if (voices && Object.keys(voices).length > 0) {
-            let enOptions = '';
-            let otherOptions = '';
-            for (const [key, info] of Object.entries(voices)) {
-              const label = info.name || key;
-              const langCode = (info.language && info.language.code) || '';
-              const langName = (info.language && info.language.name_english) || '';
-              const isJa = langCode.startsWith('ja') || key.startsWith('ja_') || /takumi|tsukuyomi/i.test(key);
-              if (isJa) continue; // 日本語モデルは除外
-
-              const isEn = langCode.startsWith('en') || key.startsWith('en_');
-              const langStr = info.language ? ` (${langName || langCode})` : '';
-              const opt = `<option value="${key}">${label}${langStr}</option>`;
-              if (isEn) {
-                enOptions += opt;
-              } else {
-                otherOptions += opt;
-              }
-            }
-            let newOptionsHtml = '';
-            if (enOptions) newOptionsHtml += `<optgroup label="🇺🇸/🇬🇧 英語モデル">${enOptions}</optgroup>`;
-            if (otherOptions) newOptionsHtml += `<optgroup label="🌐 その他の多言語モデル">${otherOptions}</optgroup>`;
-            if (!newOptionsHtml) newOptionsHtml = enOptions || otherOptions;
-
-            // 既存ブロックの音声リストを更新
-            document.querySelectorAll('#piperDialogueContainer .block-voice').forEach(sel => {
-              const prev = sel.value;
-              sel.innerHTML = newOptionsHtml;
-              if (prev && sel.querySelector(`option[value="${prev}"]`)) sel.value = prev;
-            });
-            window._piperDynamicVoiceHtml = newOptionsHtml;
-          }
-        } else {
-          throw new Error(`サーバーが応答しましたがエラーです (HTTP ${res.status})`);
-        }
-      } catch (err) {
-        piperServerConnected = false;
-        piperGenerateBtn.disabled = true;
-        piperConnectionStatus.innerHTML = `<span class="server-status-dot dot-offline"></span> 接続失敗: ${err.message}`;
-      }
-    });
-
-    // Piper: 詳細設定トグル
-    document.getElementById('piperToggleAdvanced').addEventListener('change', (e) => {
-      document.getElementById('piperAdvancedSettings').style.display = e.target.checked ? 'flex' : 'none';
-    });
-    document.getElementById('piperSpeechSpeed').addEventListener('input', (e) => {
-      document.getElementById('piperSpeedDisplay').innerText = Number(e.target.value).toFixed(1);
-    });
-
-    // Piper: 対話ブロック初期化
-    const piperDialogueContainer = document.getElementById('piperDialogueContainer');
-    piperDialogueContainer.appendChild(createDialogueBlock('piper', '', 'en_US-lessac-medium'));
-    document.getElementById('piperAddBlockBtn').addEventListener('click', () => {
-      piperDialogueContainer.appendChild(createDialogueBlock('piper'));
-    });
-
-    // Piper: 音声生成
-    piperGenerateBtn.addEventListener('click', async () => {
-      const blocks = piperDialogueContainer.querySelectorAll('.dialogue-block');
-      if (blocks.length === 0 || !piperServerConnected) return;
-
-      const serverUrl = document.getElementById('piperServerUrl').value.trim();
-
-      try {
-        piperGenerateBtn.disabled = true;
-        piperResultArea.style.display = 'none';
-        
-        let combinedPcm = [];
-        let originalSampleRate = 22050; // Piper default
-        const speedParam = parseFloat(document.getElementById('piperSpeechSpeed').value);
-
-        for (let b = 0; b < blocks.length; b++) {
-          const block = blocks[b];
-          const voiceId = block.querySelector('.block-voice').value;
-          const speakerName = block.querySelector('.block-speaker-name').value.trim();
-          const voiceLabel = block.querySelector('.block-voice').options[block.querySelector('.block-voice').selectedIndex].text.split(' ')[0];
-          const displaySpeaker = speakerName ? speakerName : voiceLabel;
-          
-          const blockText = block.querySelector('.block-text').value.trim();
-          if (!blockText) continue;
-          
-          const lines = blockText.split('\n');
-          for (let i = 0; i < lines.length; i++) {
-            let line = lines[i].trim();
-            if (!line) continue;
-            
-            piperStatusText.innerText = `音声生成中... (${displaySpeaker} - ブロック ${b + 1}/${blocks.length}, 行 ${i + 1}/${lines.length})`;
-
-            // Piper HTTP API: テキストをPOSTしてWAVを受け取る
-            const params = new URLSearchParams({ text: line, voice: voiceId });
-            if (speedParam !== 1.0) params.append('lengthScale', (1.0 / speedParam).toFixed(2));
-
-            const res = await fetch(`${serverUrl}/api/tts?${params.toString()}`, {
-              method: 'GET',
-            });
-
-            if (!res.ok) throw new Error(`Piperサーバーエラー: HTTP ${res.status}`);
-
-            const wavArrayBuffer = await res.arrayBuffer();
-            
-            // WAVからPCMデータを抽出
-            const audioCtx = new AudioContext();
-            const decodedBuffer = await audioCtx.decodeAudioData(wavArrayBuffer);
-            originalSampleRate = decodedBuffer.sampleRate;
-            const channelData = decodedBuffer.getChannelData(0);
-            combinedPcm.push(new Float32Array(channelData));
-            audioCtx.close();
-          }
-        }
-
-        if (combinedPcm.length === 0) {
-          throw new Error("生成するテキストがありません。");
-        }
-
-        // 連結（0.3秒の無音挿入）
-        const silenceLength = Math.floor(originalSampleRate * 0.3);
-        const totalLength = combinedPcm.reduce((sum, arr) => sum + arr.length, 0) + silenceLength * Math.max(0, combinedPcm.length - 1);
-        const pcmData = new Float32Array(totalLength);
-        
-        let offset = 0;
-        for (let i = 0; i < combinedPcm.length; i++) {
-          pcmData.set(combinedPcm[i], offset);
-          offset += combinedPcm[i].length;
-          if (i < combinedPcm.length - 1) {
-            offset += silenceLength;
-          }
-        }
-
-        const targetChannels = parseInt(document.getElementById('piperChannel').value);
-        const targetSampleRate = parseInt(document.getElementById('piperSampleRate').value);
-        const targetBitrate = parseInt(document.getElementById('piperBitrate').value);
-        const outputFormat = document.getElementById('piperOutputFormat').value;
-
-        piperStatusText.innerText = `音声の圧縮と ${outputFormat.toUpperCase()} フォーマットへの変換中...`;
-
-        let finalBlob;
-        if (outputFormat === 'webm') {
-          finalBlob = await encodeToWebM(pcmData, originalSampleRate, targetChannels, targetSampleRate, targetBitrate);
-        } else if (outputFormat === 'wav') {
-          finalBlob = await encodeToWav(pcmData, originalSampleRate, targetChannels, targetSampleRate);
-        } else if (outputFormat === 'mp3') {
-          finalBlob = await encodeToMp3(pcmData, originalSampleRate, targetChannels, targetSampleRate, targetBitrate);
-        }
-
-        const audioUrl = URL.createObjectURL(finalBlob);
-        piperAudioPlayer.src = audioUrl;
-        piperDownloadLink.href = audioUrl;
-        
-        const dateStr = new Date().toISOString().replace(/[:.]/g, '-');
-        piperDownloadLink.download = `piper_${dateStr}.${outputFormat}`;
-        piperDownloadLink.innerText = `この音声をダウンロード (.${outputFormat})`;
-        
-        piperCurrentAudioBlob = finalBlob;
-        piperDriveStatus.innerText = '';
-        piperSaveDriveBtn.disabled = false;
-        
-        piperStatusText.innerText = '完了しました！';
-        piperResultArea.style.display = 'block';
-
-      } catch (err) {
-        piperStatusText.innerText = 'エラーが発生しました: ' + err.message;
-        console.error(err);
-      } finally {
-        piperGenerateBtn.disabled = false;
-      }
-    });
-
-    // Piper: Google Drive保存
-    piperSaveDriveBtn.addEventListener('click', () => {
-      const blocks = piperDialogueContainer.querySelectorAll('.dialogue-block');
-      const outputFormat = document.getElementById('piperOutputFormat').value;
-      saveToGoogleDrive('Piper', piperCurrentAudioBlob, blocks,
-        document.getElementById('piperSpeechSpeed'),
-        document.getElementById('piperChannel'),
-        document.getElementById('piperSampleRate'),
-        document.getElementById('piperBitrate'),
-        outputFormat, piperDriveStatus, piperSaveDriveBtn
       );
     });
 
