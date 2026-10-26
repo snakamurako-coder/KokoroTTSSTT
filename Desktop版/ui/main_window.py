@@ -11,8 +11,8 @@ class MainWindow(QMainWindow):
         self.cfg = config_manager
 
         self.setWindowTitle("Kokoro TTS & STT Studio (Desktop)")
-        self.resize(980, 720)
-        self.setMinimumSize(800, 600)
+        self.resize(980, 780)
+        self.setMinimumSize(720, 520)
 
         self._init_ui()
 
@@ -21,11 +21,12 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central_widget)
 
         main_layout = QVBoxLayout(central_widget)
-        main_layout.setContentsMargins(14, 14, 14, 14)
-        main_layout.setSpacing(10)
+        main_layout.setContentsMargins(10, 10, 10, 10)
+        main_layout.setSpacing(8)
 
         # ===== タブウィジェット =====
         self.tabs = QTabWidget()
+        self.tabs.setDocumentMode(True)
         
         self.tts_page = TTSPage(self.cfg, self)
         self.stt_page = STTPage(self.cfg, self)
@@ -38,7 +39,7 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self.stt_page, "🎙️ 音声認識 (STT Studio)")
         self.tabs.addTab(self.settings_page, "⚙️ 設定 & クラウド連携")
 
-        main_layout.addWidget(self.tabs)
+        main_layout.addWidget(self.tabs, 1)
 
         # ===== ステータスバー =====
         status_bar = QStatusBar()

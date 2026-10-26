@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
     QProgressBar, QCheckBox, QStyle, QStyleOptionSlider,
     QDoubleSpinBox, QSizePolicy,
 )
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, Signal, QTimer
 from services.tts_service import TTSService
 from services.audio_player import AudioPlayerService
 from services.model_manager import ModelManager, ModelDownloadWorker
@@ -232,14 +232,33 @@ class TTSPage(QWidget):
         self._on_engine_changed()
 
     def _init_ui(self):
-        main_layout = QVBoxLayout(self)
+        # ページ全体を縦スクロール可能に（詳細パラメーター展開で潰れないように）
+        root = QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+
+        self.page_scroll = QScrollArea()
+        self.page_scroll.setWidgetResizable(True)
+        self.page_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self.page_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.page_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.page_scroll.setStyleSheet(
+            "QScrollArea { background: transparent; border: none; }"
+            "QScrollArea > QWidget > QWidget { background: transparent; }"
+        )
+
+        self.content_widget = QWidget()
+        self.content_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        main_layout = QVBoxLayout(self.content_widget)
         main_layout.setContentsMargins(16, 16, 16, 16)
-        main_layout.setSpacing(12)
+        main_layout.setSpacing(14)
 
         # ===== 上部設定パネル =====
         settings_group = QGroupBox("⚙ 音声エンジン & フォーマット設定")
+        settings_group.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         set_layout = QVBoxLayout(settings_group)
-        set_layout.setSpacing(10)
+        set_layout.setContentsMargins(12, 18, 12, 12)
+        set_layout.setSpacing(12)
 
         # 1行目: エンジン・フォーマット・速度
         row1 = QHBoxLayout()
@@ -297,10 +316,11 @@ class TTSPage(QWidget):
         """)
         self.advanced_frame.setVisible(False)
         self.advanced_frame.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        self.advanced_frame.setMinimumHeight(0)
 
         adv_layout = QVBoxLayout(self.advanced_frame)
-        adv_layout.setContentsMargins(12, 12, 12, 12)
-        adv_layout.setSpacing(14)
+        adv_layout.setContentsMargins(14, 14, 14, 14)
+        adv_layout.setSpacing(16)
 
         # --- 音質行 ---
         quality_row = QHBoxLayout()
@@ -358,62 +378,57 @@ class TTSPage(QWidget):
         self.pause_controls.setVisible(False)
         self.pause_controls.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         pause_layout = QVBoxLayout(self.pause_controls)
-        pause_layout.setContentsMargins(12, 12, 12, 12)
-        pause_layout.setSpacing(12)
+        pause_layout.setContentsMargins(14, 14, 14, 14)
+        pause_layout.setSpacing(14)
 
-        sentence_row = QHBoxLayout()
-        sentence_row.setSpacing(10)
-        sentence_lbl = QLabel("文末 (. ? !) の後:")
-        sentence_lbl.setMinimumWidth(130)
-        sentence_row.addWidget(sentence_lbl)
+        # 縦積みにして狭い幅でも潰れないようにする
+        sentence_lbl = QLabel("文末 (. ? !) の後")
+        sentence_lbl.setStyleSheet("font-weight: 600;")
+        pause_layout.addWidget(sentence_lbl)
         self.sentence_pause_spin = QDoubleSpinBox()
         self.sentence_pause_spin.setRange(0.1, 2.0)
         self.sentence_pause_spin.setSingleStep(0.1)
         self.sentence_pause_spin.setDecimals(1)
         self.sentence_pause_spin.setValue(0.5)
         self.sentence_pause_spin.setSuffix(" 秒")
-        self.sentence_pause_spin.setMinimumWidth(110)
-        self.sentence_pause_spin.setMinimumHeight(36)
-        sentence_row.addWidget(self.sentence_pause_spin)
-        sentence_row.addStretch()
-        pause_layout.addLayout(sentence_row)
+        self.sentence_pause_spin.setMinimumHeight(40)
+        self.sentence_pause_spin.setMaximumWidth(160)
+        pause_layout.addWidget(self.sentence_pause_spin)
 
+        marker_lbl = QLabel("特定記号（連続で倍数: // = 2倍）")
+        marker_lbl.setStyleSheet("font-weight: 600;")
+        pause_layout.addWidget(marker_lbl)
         marker_row = QHBoxLayout()
-        marker_row.setSpacing(10)
-        marker_lbl = QLabel("特定記号:")
-        marker_lbl.setMinimumWidth(70)
-        marker_row.addWidget(marker_lbl)
+        marker_row.setSpacing(12)
         self.pause_marker_edit = QLineEdit("/")
         self.pause_marker_edit.setMaxLength(8)
-        self.pause_marker_edit.setMinimumWidth(64)
-        self.pause_marker_edit.setMaximumWidth(80)
-        self.pause_marker_edit.setMinimumHeight(36)
+        self.pause_marker_edit.setMinimumWidth(72)
+        self.pause_marker_edit.setMaximumWidth(96)
+        self.pause_marker_edit.setMinimumHeight(40)
         self.pause_marker_edit.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.pause_marker_edit.setToolTip("文中の区切り記号。連続すると無音が倍数になります（例: // = 2倍）")
         marker_row.addWidget(self.pause_marker_edit)
-        marker_row.addWidget(QLabel("の後:"))
+        after_lbl = QLabel("の後")
+        marker_row.addWidget(after_lbl)
         self.marker_pause_spin = QDoubleSpinBox()
         self.marker_pause_spin.setRange(0.1, 2.0)
         self.marker_pause_spin.setSingleStep(0.1)
         self.marker_pause_spin.setDecimals(1)
         self.marker_pause_spin.setValue(0.3)
         self.marker_pause_spin.setSuffix(" 秒")
-        self.marker_pause_spin.setMinimumWidth(110)
-        self.marker_pause_spin.setMinimumHeight(36)
+        self.marker_pause_spin.setMinimumHeight(40)
+        self.marker_pause_spin.setMaximumWidth(160)
         marker_row.addWidget(self.marker_pause_spin)
-        marker_note = QLabel("（ // で2倍、/// で3倍 … ）")
-        marker_note.setStyleSheet("color: #94a3b8; font-size: 12px;")
-        marker_row.addWidget(marker_note)
         marker_row.addStretch()
         pause_layout.addLayout(marker_row)
 
         pause_hint = QLabel(
-            "オフ時は従来どおり（ブロック間 0.3 秒のみ）。"
+            "オフ時は従来どおり（ブロック間 0.3 秒のみ）。\n"
             "オン時は文を分割して合成し、指定無音を挿入します。特定記号自体は読み上げません。"
         )
         pause_hint.setWordWrap(True)
-        pause_hint.setMinimumHeight(36)
-        pause_hint.setStyleSheet("color: #94a3b8; font-size: 12px; line-height: 1.4;")
+        pause_hint.setMinimumHeight(48)
+        pause_hint.setStyleSheet("color: #94a3b8; font-size: 12px;")
         pause_layout.addWidget(pause_hint)
 
         adv_layout.addWidget(self.pause_controls)
@@ -435,11 +450,15 @@ class TTSPage(QWidget):
 
         # ===== 対話エディター =====
         editor_group = QGroupBox("📝 対話エディター (Dialogue Editor)")
+        editor_group.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        editor_group.setMinimumHeight(320)
         editor_layout = QVBoxLayout(editor_group)
+        editor_layout.setContentsMargins(12, 18, 12, 12)
         editor_layout.setSpacing(8)
 
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setMinimumHeight(240)
         self.scroll_area.setStyleSheet("QScrollArea { border: none; background: transparent; }")
         
         self.blocks_container = QWidget()
@@ -456,7 +475,8 @@ class TTSPage(QWidget):
         self.add_block_btn.clicked.connect(lambda: self.add_block())
         editor_layout.addWidget(self.add_block_btn)
 
-        main_layout.addWidget(editor_group, 1)
+        # stretch しない（ページ全体スクロールで高さを確保）
+        main_layout.addWidget(editor_group, 0)
 
         # ===== 操作ボタンエリア =====
         btn_layout = QHBoxLayout()
@@ -515,11 +535,46 @@ class TTSPage(QWidget):
         player_layout.addWidget(self.play_btn)
         player_layout.addWidget(self.seek_slider, 1)
         player_layout.addWidget(self.time_label)
+        player_group.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         main_layout.addWidget(player_group)
         main_layout.addWidget(self.status_label)
+        main_layout.addStretch(0)
+
+        self.page_scroll.setWidget(self.content_widget)
+        root.addWidget(self.page_scroll)
 
         # 初期ブロックを1つ作成
         self.add_block()
+        self._refresh_page_scroll()
+
+    def _refresh_page_scroll(self):
+        """詳細パネル開閉後にコンテンツ高さを再計算し、ページ縦スクロールを有効化する。"""
+        if not hasattr(self, "content_widget"):
+            return
+        layout = self.content_widget.layout()
+        if layout is not None:
+            layout.activate()
+            # 表示中ウィジェットの推奨高さを合算（非表示は sizeHint に含まれにくいので個別加算）
+            needed = layout.contentsMargins().top() + layout.contentsMargins().bottom()
+            for i in range(layout.count()):
+                item = layout.itemAt(i)
+                if item is None:
+                    continue
+                w = item.widget()
+                if w is not None:
+                    if w.isVisibleTo(self.content_widget):
+                        needed += max(w.sizeHint().height(), w.minimumHeight())
+                    continue
+                sp = item.spacerItem()
+                if sp is not None:
+                    needed += sp.sizeHint().height()
+                elif item.layout() is not None:
+                    needed += item.layout().sizeHint().height()
+                needed += layout.spacing()
+            self.content_widget.setMinimumHeight(max(needed + 32, 480))
+        self.content_widget.adjustSize()
+        self.content_widget.updateGeometry()
+        self.page_scroll.updateGeometry()
 
     def _init_connections(self):
         self.player.position_changed.connect(self._on_position_changed)
@@ -531,20 +586,12 @@ class TTSPage(QWidget):
 
     def _toggle_advanced_settings(self, checked):
         self.advanced_frame.setVisible(checked)
-        self.advanced_frame.updateGeometry()
-        if self.parentWidget():
-            self.parentWidget().updateGeometry()
+        # レイアウト確定後に高さ再計算（即時だと sizeHint が古いことがある）
+        QTimer.singleShot(0, self._refresh_page_scroll)
 
     def _toggle_pause_controls(self, checked):
         self.pause_controls.setVisible(checked)
-        self.pause_controls.adjustSize()
-        self.advanced_frame.adjustSize()
-        self.advanced_frame.updateGeometry()
-        # 親の設定グループも再計算して潰れた表示を防ぐ
-        settings_group = self.advanced_frame.parentWidget()
-        if settings_group is not None:
-            settings_group.adjustSize()
-            settings_group.updateGeometry()
+        QTimer.singleShot(0, self._refresh_page_scroll)
 
     def _on_format_changed(self):
         ext = self.format_combo.currentData()

@@ -49,8 +49,9 @@ QGroupBox {
     border: 1px solid rgba(255, 255, 255, 0.08);
     background-color: rgba(30, 41, 59, 0.6);
     border-radius: 12px;
-    margin-top: 24px;
-    padding: 16px 14px 14px 14px;
+    margin-top: 18px;
+    /* 大きすぎる padding は子ウィジェットをクリップして潰す原因になるため最小限に */
+    padding: 8px 8px 8px 8px;
     font-weight: 600;
 }
 
@@ -58,7 +59,7 @@ QGroupBox::title {
     subcontrol-origin: margin;
     subcontrol-position: top left;
     left: 14px;
-    top: 6px;
+    top: 4px;
     color: #a78bfa;
     background-color: transparent;
     padding: 0 4px;
