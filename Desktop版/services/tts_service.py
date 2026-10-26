@@ -18,6 +18,56 @@ DECADE_MAP = {
     '80': 'eighties', '90': 'nineties'
 }
 
+# 単位略語 → (単数形, 複数形)。Kokoro/espeak は kg 等を字母読みにするため事前展開する。
+UNIT_MAP = {
+    # Length
+    'km': ('kilometer', 'kilometers'),
+    'cm': ('centimeter', 'centimeters'),
+    'mm': ('millimeter', 'millimeters'),
+    'm': ('meter', 'meters'),
+    'mi': ('mile', 'miles'),
+    'ft': ('foot', 'feet'),
+    'in': ('inch', 'inches'),
+    'yd': ('yard', 'yards'),
+    # Mass
+    'kg': ('kilogram', 'kilograms'),
+    'mg': ('milligram', 'milligrams'),
+    'g': ('gram', 'grams'),
+    'lb': ('pound', 'pounds'),
+    'lbs': ('pound', 'pounds'),
+    'oz': ('ounce', 'ounces'),
+    # Volume
+    'ml': ('milliliter', 'milliliters'),
+    'l': ('liter', 'liters'),
+    'gal': ('gallon', 'gallons'),
+    # Speed
+    'mph': ('mile per hour', 'miles per hour'),
+    'kph': ('kilometer per hour', 'kilometers per hour'),
+    'kmh': ('kilometer per hour', 'kilometers per hour'),
+    'km/h': ('kilometer per hour', 'kilometers per hour'),
+    'm/s': ('meter per second', 'meters per second'),
+    # Data
+    'tb': ('terabyte', 'terabytes'),
+    'gb': ('gigabyte', 'gigabytes'),
+    'mb': ('megabyte', 'megabytes'),
+    'kb': ('kilobyte', 'kilobytes'),
+    # Frequency / power
+    'ghz': ('gigahertz', 'gigahertz'),
+    'mhz': ('megahertz', 'megahertz'),
+    'khz': ('kilohertz', 'kilohertz'),
+    'hz': ('hertz', 'hertz'),
+    'kw': ('kilowatt', 'kilowatts'),
+    'w': ('watt', 'watts'),
+    # Time
+    'ms': ('millisecond', 'milliseconds'),
+    'sec': ('second', 'seconds'),
+    'hrs': ('hour', 'hours'),
+    'hr': ('hour', 'hours'),
+}
+
+# 単独でも一般英単語になり得る単位。数字に密着した場合のみ展開する (例: 5m, 2in)。
+_AMBIGUOUS_UNITS = frozenset({'in', 'm', 'g', 'l', 'w'})
+
 try:
     import win32com.client
     HAS_SAPI = True
@@ -146,12 +196,22 @@ class TTSService:
         if actual_voice not in available:
             actual_voice = "af" if "af" in available else available[0]
 
-        # 年代表記 (1980s, 1980's, '80s等) を自然な英語読み (nineteen eighties等) に事前正規化
-        processed_text = self.normalize_english_decades(text)
+        # 年代・単位略語などを自然な英語読みに事前正規化
+        processed_text = self.normalize_english_for_tts(text)
 
         samples, sample_rate = kokoro.create(processed_text, voice=actual_voice, speed=speed, lang="en-us")
         sf.write(str(output_path), samples, sample_rate)
         return output_path
+
+    @classmethod
+    def normalize_english_for_tts(cls, text: str) -> str:
+        """英語 TTS 向けの事前正規化（全角半角化・年代・単位略語）。"""
+        if not text:
+            return text
+        text = unicodedata.normalize('NFKC', text)
+        text = cls.normalize_english_decades(text)
+        text = cls.normalize_english_units(text)
+        return text
 
     @staticmethod
     def normalize_english_decades(text: str) -> str:
@@ -162,9 +222,6 @@ class TTSService:
         """
         if not text:
             return text
-
-        # 全角数字・記号を半角に正規化
-        text = unicodedata.normalize('NFKC', text)
 
         # 1. 4桁の年代: 1980s, 1980's, 1980s', 2000s, 2000's 等
         def replace_4digit(m):
@@ -186,6 +243,77 @@ class TTSService:
             return DECADE_MAP.get(dec, dec + 's')
 
         text = re.sub(r'(?:[\'’]|\b)([0-9]0)[\'’]?[sS][\'’]?\b', replace_2digit, text)
+
+        return text
+
+    @staticmethod
+    def normalize_english_units(text: str) -> str:
+        """
+        単位略語 (kg, km, cm 等) を Spoken form に展開する。
+        Kokoro / espeak は略語を字母読み (ケー・ジー等) にしがちなので、数字付き数量を事前変換する。
+        """
+        if not text:
+            return text
+
+        unambiguous = sorted(
+            (u for u in UNIT_MAP if u not in _AMBIGUOUS_UNITS),
+            key=len,
+            reverse=True,
+        )
+        ambiguous = sorted(_AMBIGUOUS_UNITS, key=len, reverse=True)
+
+        def _spoken(number: str, unit_key: str) -> str:
+            singular, plural = UNIT_MAP[unit_key]
+            # 素の "1" のみ単数。1.0 や 1,000 は複数読みが自然。
+            form = singular if number == '1' else plural
+            return f'{number} {form}'
+
+        def replace_unambiguous(m):
+            return _spoken(m.group(1), m.group(2).lower())
+
+        def replace_ambiguous(m):
+            return _spoken(m.group(1), m.group(2).lower())
+
+        # 数字と単位の間に空白があってもよい (5 kg, 5kg)
+        unit_alt = '|'.join(re.escape(u) for u in unambiguous)
+        text = re.sub(
+            rf'(\d+(?:[.,]\d+)*)\s*({unit_alt})\b',
+            replace_unambiguous,
+            text,
+            flags=re.IGNORECASE,
+        )
+
+        # 曖昧単位は数字に密着のみ (5m OK / 1 in 5 の in は触らない)
+        amb_alt = '|'.join(re.escape(u) for u in ambiguous)
+        text = re.sub(
+            rf'(\d+(?:[.,]\d+)*)({amb_alt})\b',
+            replace_ambiguous,
+            text,
+            flags=re.IGNORECASE,
+        )
+
+        # 温度: 25°C / 98.6°F / 25℃
+        def replace_temp(m):
+            number = m.group(1)
+            scale = m.group(2).upper()
+            if scale == 'C':
+                return f'{number} degrees Celsius'
+            return f'{number} degrees Fahrenheit'
+
+        text = re.sub(
+            r'(\d+(?:[.,]\d+)*)\s*°\s*([CcFf])\b',
+            replace_temp,
+            text,
+        )
+        text = re.sub(
+            r'(\d+(?:[.,]\d+)*)\s*([℃℉])',
+            lambda m: (
+                f'{m.group(1)} degrees Celsius'
+                if m.group(2) == '℃'
+                else f'{m.group(1)} degrees Fahrenheit'
+            ),
+            text,
+        )
 
         return text
 
@@ -228,7 +356,7 @@ class TTSService:
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
         if model_key == "piper_en":
-            text = self.normalize_english_decades(text)
+            text = self.normalize_english_for_tts(text)
 
         voice = self.get_piper_voice(model_key)
         with wave.open(str(output_path), "wb") as wav_file:

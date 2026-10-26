@@ -1306,7 +1306,7 @@
     // ==========================================
     //  KOKORO ENGINE
     // ==========================================
-    // Kokoro: 英語の年代表記 (1980s, 1980's, '80s等) を自然な読み (nineteen eighties等) に事前正規化
+    // Kokoro: 年代・単位略語などを自然な英語読みに事前正規化
     const KOKORO_CENTURY_MAP = {
       '10': 'ten', '11': 'eleven', '12': 'twelve', '13': 'thirteen',
       '14': 'fourteen', '15': 'fifteen', '16': 'sixteen', '17': 'seventeen',
@@ -1319,9 +1319,34 @@
       '80': 'eighties', '90': 'nineties'
     };
 
+    // 単位略語 → [単数, 複数]。Kokoro は kg 等を字母読みにしがちなので事前展開する。
+    const KOKORO_UNIT_MAP = {
+      km: ['kilometer', 'kilometers'], cm: ['centimeter', 'centimeters'],
+      mm: ['millimeter', 'millimeters'], m: ['meter', 'meters'],
+      mi: ['mile', 'miles'], ft: ['foot', 'feet'], in: ['inch', 'inches'],
+      yd: ['yard', 'yards'],
+      kg: ['kilogram', 'kilograms'], mg: ['milligram', 'milligrams'],
+      g: ['gram', 'grams'], lb: ['pound', 'pounds'], lbs: ['pound', 'pounds'],
+      oz: ['ounce', 'ounces'],
+      ml: ['milliliter', 'milliliters'], l: ['liter', 'liters'],
+      gal: ['gallon', 'gallons'],
+      mph: ['mile per hour', 'miles per hour'],
+      kph: ['kilometer per hour', 'kilometers per hour'],
+      kmh: ['kilometer per hour', 'kilometers per hour'],
+      'km/h': ['kilometer per hour', 'kilometers per hour'],
+      'm/s': ['meter per second', 'meters per second'],
+      tb: ['terabyte', 'terabytes'], gb: ['gigabyte', 'gigabytes'],
+      mb: ['megabyte', 'megabytes'], kb: ['kilobyte', 'kilobytes'],
+      ghz: ['gigahertz', 'gigahertz'], mhz: ['megahertz', 'megahertz'],
+      khz: ['kilohertz', 'kilohertz'], hz: ['hertz', 'hertz'],
+      kw: ['kilowatt', 'kilowatts'], w: ['watt', 'watts'],
+      ms: ['millisecond', 'milliseconds'], sec: ['second', 'seconds'],
+      hrs: ['hour', 'hours'], hr: ['hour', 'hours']
+    };
+    const KOKORO_AMBIGUOUS_UNITS = new Set(['in', 'm', 'g', 'l', 'w']);
+
     function normalizeDecadesForKokoro(text) {
       if (!text) return text;
-      // 全角数字や記号を半角に正規化
       let t = text.normalize('NFKC');
 
       // 1. 4桁の年代: 1980s, 1980's, 1980s', 2000s 等
@@ -1337,6 +1362,35 @@
         if (dec === '00') return 'two thousands';
         return KOKORO_DECADE_MAP[dec] || (dec + 's');
       });
+
+      // 3. 単位略語 (5kg → 5 kilograms 等)。曖昧単位 (m/g/l/in/w) は数字密着のみ。
+      const spokenUnit = (number, unitKey) => {
+        const forms = KOKORO_UNIT_MAP[unitKey];
+        if (!forms) return `${number} ${unitKey}`;
+        return `${number} ${number === '1' ? forms[0] : forms[1]}`;
+      };
+      const unambiguous = Object.keys(KOKORO_UNIT_MAP)
+        .filter(u => !KOKORO_AMBIGUOUS_UNITS.has(u))
+        .sort((a, b) => b.length - a.length);
+      const ambiguous = [...KOKORO_AMBIGUOUS_UNITS].sort((a, b) => b.length - a.length);
+
+      const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      t = t.replace(
+        new RegExp(`(\\d+(?:[.,]\\d+)*)\\s*(${unambiguous.map(esc).join('|')})\\b`, 'gi'),
+        (match, number, unit) => spokenUnit(number, unit.toLowerCase())
+      );
+      t = t.replace(
+        new RegExp(`(\\d+(?:[.,]\\d+)*)(${ambiguous.map(esc).join('|')})\\b`, 'gi'),
+        (match, number, unit) => spokenUnit(number, unit.toLowerCase())
+      );
+
+      // 温度: 25°C / 98.6°F / 25℃
+      t = t.replace(/(\d+(?:[.,]\d+)*)\s*°\s*([CcFf])\b/g, (match, number, scale) =>
+        scale.toUpperCase() === 'C' ? `${number} degrees Celsius` : `${number} degrees Fahrenheit`
+      );
+      t = t.replace(/(\d+(?:[.,]\d+)*)\s*([℃℉])/g, (match, number, mark) =>
+        mark === '℃' ? `${number} degrees Celsius` : `${number} degrees Fahrenheit`
+      );
 
       return t;
     }
