@@ -67,18 +67,26 @@ QGroupBox::title {
 }
 
 /* ===== INPUTS & CONTROLS ===== */
-QLineEdit, QTextEdit, QPlainTextEdit, QComboBox, QSpinBox {
+QLineEdit, QTextEdit, QPlainTextEdit, QComboBox, QSpinBox, QDoubleSpinBox {
     background-color: rgba(15, 23, 42, 0.8);
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 8px;
     padding: 8px 12px;
     color: #f8fafc;
     selection-background-color: #8b5cf6;
+    min-height: 20px;
 }
 
-QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QComboBox:focus, QSpinBox:focus {
+QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus {
     border: 1px solid #8b5cf6;
     background-color: #0f172a;
+}
+
+QSpinBox::up-button, QSpinBox::down-button,
+QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {
+    width: 18px;
+    border: none;
+    background: rgba(51, 65, 85, 0.8);
 }
 
 QComboBox::drop-down {

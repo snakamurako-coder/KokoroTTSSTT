@@ -145,7 +145,7 @@
     .control-group { margin-bottom: 24px; }
     label { display: block; font-weight: 600; margin-bottom: 8px; color: #e2e8f0; font-size: 0.95em; }
     
-    input[type="text"], select, textarea {
+    input[type="text"], input[type="number"], select, textarea {
       width: 100%;
       padding: 12px 16px;
       background: var(--input-bg);
@@ -154,8 +154,46 @@
       color: var(--text-main);
       font-family: 'Outfit', sans-serif;
       font-size: 1em;
+      line-height: 1.4;
+      min-height: 44px;
       transition: all 0.3s ease;
       box-sizing: border-box;
+    }
+
+    .pause-control-block {
+      margin-top: 8px;
+      padding-top: 12px;
+      border-top: 1px solid var(--glass-border);
+    }
+    .pause-controls-panel {
+      display: none;
+      flex-direction: column;
+      gap: 14px;
+      margin-top: 12px;
+      padding: 14px 16px;
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--glass-border);
+      border-radius: 12px;
+    }
+    .pause-controls-panel .flex-row {
+      align-items: flex-end;
+      gap: 14px;
+    }
+    .pause-controls-panel .flex-row > div {
+      min-width: 140px;
+    }
+    .pause-controls-panel label {
+      margin-bottom: 6px;
+      line-height: 1.35;
+    }
+    .pause-controls-panel .hint {
+      margin: 0;
+      line-height: 1.55;
+    }
+    .pause-controls-panel input[type="text"] {
+      width: 72px;
+      text-align: center;
+      min-height: 44px;
     }
     
     select option { background: #1e293b; color: #fff; }
@@ -199,18 +237,21 @@
 
     /* ===== Themed Focus Rings ===== */
     [data-theme="kokoro"] input[type="text"]:focus,
+    [data-theme="kokoro"] input[type="number"]:focus,
     [data-theme="kokoro"] select:focus,
     [data-theme="kokoro"] textarea:focus {
       outline: none; border-color: var(--kokoro-primary);
       box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3);
     }
     [data-theme="piper"] input[type="text"]:focus,
+    [data-theme="piper"] input[type="number"]:focus,
     [data-theme="piper"] select:focus,
     [data-theme="piper"] textarea:focus {
       outline: none; border-color: var(--piper-primary);
       box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.3);
     }
     [data-theme="browser"] input[type="text"]:focus,
+    [data-theme="browser"] input[type="number"]:focus,
     [data-theme="browser"] select:focus,
     [data-theme="browser"] textarea:focus {
       outline: none; border-color: var(--browser-primary);
@@ -498,10 +539,19 @@
         margin-bottom: 6px;
       }
 
-      input[type="text"], select, textarea {
+      input[type="text"], input[type="number"], select, textarea {
         padding: 10px 12px;
         font-size: 0.95em;
         border-radius: 10px;
+        min-height: 42px;
+      }
+
+      .pause-controls-panel {
+        padding: 12px;
+        gap: 12px;
+      }
+      .pause-controls-panel .flex-row > div {
+        min-width: 100%;
       }
 
       .hint {
@@ -715,26 +765,26 @@
           </div>
 
           <div class="pause-control-block">
-            <label class="advanced-toggle" style="margin-bottom: 8px;">
+            <label class="advanced-toggle" style="margin-bottom: 0;">
               <input type="checkbox" id="kokoroPauseEnable" style="width: auto; margin: 0;">
               空白時間指定（文末・特定記号の後に無音を挿入）
             </label>
-            <div id="kokoroPauseControls" style="display: none; flex-direction: column; gap: 10px; padding-left: 8px;">
+            <div id="kokoroPauseControls" class="pause-controls-panel">
               <div class="flex-row">
                 <div>
-                  <label>文末 (. ? !) の後</label>
+                  <label>文末 (. ? !) の後（秒）</label>
                   <input type="number" id="kokoroSentencePause" min="0.1" max="2.0" step="0.1" value="0.5">
                 </div>
                 <div>
                   <label>特定記号</label>
-                  <input type="text" id="kokoroPauseMarker" value="/" maxlength="8" style="width: 64px;">
+                  <input type="text" id="kokoroPauseMarker" value="/" maxlength="8">
                 </div>
                 <div>
                   <label>記号の後（秒）</label>
                   <input type="number" id="kokoroMarkerPause" min="0.1" max="2.0" step="0.1" value="0.3">
                 </div>
               </div>
-              <div class="hint" style="margin: 0;">オフ時は従来どおり（区間間 0.3 秒）。// は無音2倍、/// は3倍。特定記号自体は読み上げません。</div>
+              <div class="hint">オフ時は従来どおり（区間間 0.3 秒）。// は無音2倍、/// は3倍。特定記号自体は読み上げません。</div>
             </div>
           </div>
         </div>
@@ -829,26 +879,26 @@
           </div>
 
           <div class="pause-control-block">
-            <label class="advanced-toggle" style="margin-bottom: 8px;">
+            <label class="advanced-toggle" style="margin-bottom: 0;">
               <input type="checkbox" id="piperPauseEnable" style="width: auto; margin: 0;">
               空白時間指定（文末・特定記号の後に無音を挿入）
             </label>
-            <div id="piperPauseControls" style="display: none; flex-direction: column; gap: 10px; padding-left: 8px;">
+            <div id="piperPauseControls" class="pause-controls-panel">
               <div class="flex-row">
                 <div>
-                  <label>文末 (. ? !) の後</label>
+                  <label>文末 (. ? !) の後（秒）</label>
                   <input type="number" id="piperSentencePause" min="0.1" max="2.0" step="0.1" value="0.5">
                 </div>
                 <div>
                   <label>特定記号</label>
-                  <input type="text" id="piperPauseMarker" value="/" maxlength="8" style="width: 64px;">
+                  <input type="text" id="piperPauseMarker" value="/" maxlength="8">
                 </div>
                 <div>
                   <label>記号の後（秒）</label>
                   <input type="number" id="piperMarkerPause" min="0.1" max="2.0" step="0.1" value="0.3">
                 </div>
               </div>
-              <div class="hint" style="margin: 0;">オフ時は従来どおり（区間間 0.3 秒）。// は無音2倍、/// は3倍。特定記号自体は読み上げません。</div>
+              <div class="hint">オフ時は従来どおり（区間間 0.3 秒）。// は無音2倍、/// は3倍。特定記号自体は読み上げません。</div>
             </div>
           </div>
         </div>
@@ -914,26 +964,26 @@
           </div>
 
           <div class="pause-control-block">
-            <label class="advanced-toggle" style="margin-bottom: 8px;">
+            <label class="advanced-toggle" style="margin-bottom: 0;">
               <input type="checkbox" id="browserPauseEnable" style="width: auto; margin: 0;">
               空白時間指定（文末・特定記号の後に無音を挿入）
             </label>
-            <div id="browserPauseControls" style="display: none; flex-direction: column; gap: 10px; padding-left: 8px;">
+            <div id="browserPauseControls" class="pause-controls-panel">
               <div class="flex-row">
                 <div>
-                  <label>文末 (. ? !) の後</label>
+                  <label>文末 (. ? !) の後（秒）</label>
                   <input type="number" id="browserSentencePause" min="0.1" max="2.0" step="0.1" value="0.5">
                 </div>
                 <div>
                   <label>特定記号</label>
-                  <input type="text" id="browserPauseMarker" value="/" maxlength="8" style="width: 64px;">
+                  <input type="text" id="browserPauseMarker" value="/" maxlength="8">
                 </div>
                 <div>
                   <label>記号の後（秒）</label>
                   <input type="number" id="browserMarkerPause" min="0.1" max="2.0" step="0.1" value="0.3">
                 </div>
               </div>
-              <div class="hint" style="margin: 0;">オフ時は従来どおり連続読み上げ。オン時は文末・特定記号の後で待機します。// は2倍。</div>
+              <div class="hint">オフ時は従来どおり連続読み上げ。オン時は文末・特定記号の後で待機します。// は2倍。</div>
             </div>
           </div>
         </div>
@@ -1658,9 +1708,11 @@
       const enableEl = document.getElementById(`${prefix}PauseEnable`);
       const controlsEl = document.getElementById(`${prefix}PauseControls`);
       if (!enableEl || !controlsEl) return;
-      enableEl.addEventListener('change', () => {
+      const sync = () => {
         controlsEl.style.display = enableEl.checked ? 'flex' : 'none';
-      });
+      };
+      enableEl.addEventListener('change', sync);
+      sync();
     }
 
     const kokoroDownloadBtn = document.getElementById('kokoroDownloadBtn');

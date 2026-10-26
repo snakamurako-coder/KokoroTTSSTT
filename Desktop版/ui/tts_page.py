@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (
     QTextEdit, QLineEdit, QComboBox, QSlider, QScrollArea,
     QFileDialog, QMessageBox, QGroupBox, QFrame, QDialog,
     QProgressBar, QCheckBox, QStyle, QStyleOptionSlider,
-    QDoubleSpinBox,
+    QDoubleSpinBox, QSizePolicy,
 )
 from PySide6.QtCore import Qt, Signal
 from services.tts_service import TTSService
@@ -287,17 +287,20 @@ class TTSPage(QWidget):
         set_layout.addWidget(self.advanced_check)
 
         self.advanced_frame = QFrame()
+        self.advanced_frame.setObjectName("advancedFrame")
         self.advanced_frame.setStyleSheet("""
-            QFrame {
+            QFrame#advancedFrame {
                 background: rgba(15, 23, 42, 0.6);
                 border: 1px solid rgba(255, 255, 255, 0.08);
                 border-radius: 8px;
-                padding: 6px;
             }
         """)
         self.advanced_frame.setVisible(False)
+        self.advanced_frame.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
         adv_layout = QVBoxLayout(self.advanced_frame)
-        adv_layout.setSpacing(10)
+        adv_layout.setContentsMargins(12, 12, 12, 12)
+        adv_layout.setSpacing(14)
 
         # --- 音質行 ---
         quality_row = QHBoxLayout()
@@ -332,35 +335,60 @@ class TTSPage(QWidget):
 
         # --- 空白時間指定 ---
         self.pause_check = QCheckBox("空白時間指定（文末・特定記号の後に無音を挿入）")
-        self.pause_check.setStyleSheet("color: #c4b5fd; font-weight: bold; font-size: 12px;")
+        self.pause_check.setStyleSheet("color: #c4b5fd; font-weight: bold; font-size: 13px; min-height: 24px;")
         self.pause_check.setChecked(False)
+        self.pause_check.setMinimumHeight(28)
         self.pause_check.toggled.connect(self._toggle_pause_controls)
         adv_layout.addWidget(self.pause_check)
 
-        self.pause_controls = QWidget()
+        self.pause_controls = QFrame()
+        self.pause_controls.setObjectName("pauseControls")
+        self.pause_controls.setStyleSheet("""
+            QFrame#pauseControls {
+                background: rgba(139, 92, 246, 0.08);
+                border: 1px solid rgba(139, 92, 246, 0.25);
+                border-radius: 8px;
+            }
+            QFrame#pauseControls QLabel {
+                color: #e2e8f0;
+                font-size: 13px;
+                min-height: 22px;
+            }
+        """)
         self.pause_controls.setVisible(False)
+        self.pause_controls.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         pause_layout = QVBoxLayout(self.pause_controls)
-        pause_layout.setContentsMargins(8, 0, 0, 0)
-        pause_layout.setSpacing(8)
+        pause_layout.setContentsMargins(12, 12, 12, 12)
+        pause_layout.setSpacing(12)
 
         sentence_row = QHBoxLayout()
-        sentence_row.addWidget(QLabel("文末 (. ? !) の後:"))
+        sentence_row.setSpacing(10)
+        sentence_lbl = QLabel("文末 (. ? !) の後:")
+        sentence_lbl.setMinimumWidth(130)
+        sentence_row.addWidget(sentence_lbl)
         self.sentence_pause_spin = QDoubleSpinBox()
         self.sentence_pause_spin.setRange(0.1, 2.0)
         self.sentence_pause_spin.setSingleStep(0.1)
         self.sentence_pause_spin.setDecimals(1)
         self.sentence_pause_spin.setValue(0.5)
         self.sentence_pause_spin.setSuffix(" 秒")
-        self.sentence_pause_spin.setFixedWidth(100)
+        self.sentence_pause_spin.setMinimumWidth(110)
+        self.sentence_pause_spin.setMinimumHeight(36)
         sentence_row.addWidget(self.sentence_pause_spin)
         sentence_row.addStretch()
         pause_layout.addLayout(sentence_row)
 
         marker_row = QHBoxLayout()
-        marker_row.addWidget(QLabel("特定記号:"))
+        marker_row.setSpacing(10)
+        marker_lbl = QLabel("特定記号:")
+        marker_lbl.setMinimumWidth(70)
+        marker_row.addWidget(marker_lbl)
         self.pause_marker_edit = QLineEdit("/")
         self.pause_marker_edit.setMaxLength(8)
-        self.pause_marker_edit.setFixedWidth(56)
+        self.pause_marker_edit.setMinimumWidth(64)
+        self.pause_marker_edit.setMaximumWidth(80)
+        self.pause_marker_edit.setMinimumHeight(36)
+        self.pause_marker_edit.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.pause_marker_edit.setToolTip("文中の区切り記号。連続すると無音が倍数になります（例: // = 2倍）")
         marker_row.addWidget(self.pause_marker_edit)
         marker_row.addWidget(QLabel("の後:"))
@@ -370,15 +398,22 @@ class TTSPage(QWidget):
         self.marker_pause_spin.setDecimals(1)
         self.marker_pause_spin.setValue(0.3)
         self.marker_pause_spin.setSuffix(" 秒")
-        self.marker_pause_spin.setFixedWidth(100)
+        self.marker_pause_spin.setMinimumWidth(110)
+        self.marker_pause_spin.setMinimumHeight(36)
         marker_row.addWidget(self.marker_pause_spin)
-        marker_row.addWidget(QLabel("（ // で2倍、/// で3倍 … ）"))
+        marker_note = QLabel("（ // で2倍、/// で3倍 … ）")
+        marker_note.setStyleSheet("color: #94a3b8; font-size: 12px;")
+        marker_row.addWidget(marker_note)
         marker_row.addStretch()
         pause_layout.addLayout(marker_row)
 
-        pause_hint = QLabel("オフ時は従来どおり（ブロック間 0.3 秒のみ）。オン時は文を分割して合成し、指定無音を挿入します。特定記号自体は読み上げません。")
+        pause_hint = QLabel(
+            "オフ時は従来どおり（ブロック間 0.3 秒のみ）。"
+            "オン時は文を分割して合成し、指定無音を挿入します。特定記号自体は読み上げません。"
+        )
         pause_hint.setWordWrap(True)
-        pause_hint.setStyleSheet("color: #94a3b8; font-size: 11px;")
+        pause_hint.setMinimumHeight(36)
+        pause_hint.setStyleSheet("color: #94a3b8; font-size: 12px; line-height: 1.4;")
         pause_layout.addWidget(pause_hint)
 
         adv_layout.addWidget(self.pause_controls)
@@ -496,9 +531,20 @@ class TTSPage(QWidget):
 
     def _toggle_advanced_settings(self, checked):
         self.advanced_frame.setVisible(checked)
+        self.advanced_frame.updateGeometry()
+        if self.parentWidget():
+            self.parentWidget().updateGeometry()
 
     def _toggle_pause_controls(self, checked):
         self.pause_controls.setVisible(checked)
+        self.pause_controls.adjustSize()
+        self.advanced_frame.adjustSize()
+        self.advanced_frame.updateGeometry()
+        # 親の設定グループも再計算して潰れた表示を防ぐ
+        settings_group = self.advanced_frame.parentWidget()
+        if settings_group is not None:
+            settings_group.adjustSize()
+            settings_group.updateGeometry()
 
     def _on_format_changed(self):
         ext = self.format_combo.currentData()
