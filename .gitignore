@@ -17,6 +17,9 @@ Desktop版/models/*.onnx
 Desktop版/models/*.bin
 Desktop版/models/*.json
 
+# ローカル仕様メモ（アプリ側制御の作業記録・リポジトリには載せない）
+Desktop版/TTS_APP_NORMALIZE.md
+
 # IDE & OS
 .vscode/
 .idea/
