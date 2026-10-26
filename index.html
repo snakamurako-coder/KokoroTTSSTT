@@ -1417,6 +1417,89 @@
     };
     const KOKORO_AMBIGUOUS_UNITS = new Set(['in', 'm', 'g', 'l', 'w']);
 
+    const KOKORO_YEAR_ONES = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
+    const KOKORO_YEAR_TEENS = ['ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+    const KOKORO_YEAR_TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+    const KOKORO_YEAR_PREPS = 'in|since|until|till|by|from|during|before|after|around|about';
+    const KOKORO_YEAR_EXCLUDE_PREFIX = /(?:room|page|flight|highway|apt|apartment|suite|gate|channel|isbn|number|no\.?|nr\.?|code|id|pin|#|\$|£|€|¥)\s*$/i;
+    const KOKORO_YEAR_EXCLUDE_SUFFIX = /^\s+(?:people|persons|users|dollars?|yen|times|copies|items|units|soldiers|troops|men|women|children|students|employees|years)\b/i;
+    const KOKORO_YEAR_MIN = 1100;
+    const KOKORO_YEAR_MAX = 2199;
+
+    function twoDigitWords(n) {
+      if (n <= 0) return '';
+      if (n < 10) return KOKORO_YEAR_ONES[n];
+      if (n < 20) return KOKORO_YEAR_TEENS[n - 10];
+      const tens = Math.floor(n / 10);
+      const ones = n % 10;
+      if (ones === 0) return KOKORO_YEAR_TENS[tens];
+      return `${KOKORO_YEAR_TENS[tens]} ${KOKORO_YEAR_ONES[ones]}`;
+    }
+
+    function yearToSpoken(year) {
+      const y = parseInt(year, 10);
+      if (Number.isNaN(y)) return String(year);
+      if (y === 2000) return 'two thousand';
+      const left = Math.floor(y / 100);
+      const right = y % 100;
+      const leftWords = twoDigitWords(left);
+      if (!leftWords) return String(y);
+      if (right === 0) return `${leftWords} hundred`;
+      if (right < 10) return `${leftWords} oh ${KOKORO_YEAR_ONES[right]}`;
+      return `${leftWords} ${twoDigitWords(right)}`;
+    }
+
+    function isPlausibleYear(year) {
+      const y = parseInt(year, 10);
+      return !Number.isNaN(y) && y >= KOKORO_YEAR_MIN && y <= KOKORO_YEAR_MAX;
+    }
+
+    function normalizeYearsForKokoro(text) {
+      if (!text) return text;
+      let t = text;
+
+      t = t.replace(/\bbetween\s+(\d{4})\s+and\s+(\d{4})\b/gi, (match, a, b) =>
+        isPlausibleYear(a) && isPlausibleYear(b)
+          ? match.replace(a, yearToSpoken(a)).replace(b, yearToSpoken(b))
+          : match
+      );
+      t = t.replace(/\bfrom\s+(\d{4})\s+to\s+(\d{4})\b/gi, (match, a, b) =>
+        isPlausibleYear(a) && isPlausibleYear(b)
+          ? match.replace(a, yearToSpoken(a)).replace(b, yearToSpoken(b))
+          : match
+      );
+      t = t.replace(new RegExp(`\\b(${KOKORO_YEAR_PREPS})\\s+(\\d{4})(\\s*(?:AD|BC|CE|BCE))?\\b`, 'gi'), (match, prep, year, era, offset, whole) => {
+        if (!isPlausibleYear(year)) return match;
+        const after = whole.slice(offset + match.length);
+        if (KOKORO_YEAR_EXCLUDE_SUFFIX.test(after)) return match;
+        return match.replace(year, yearToSpoken(year));
+      });
+      t = t.replace(/\b((?:the\s+)?year\s+)(\d{4})\b/gi, (match, prefix, year) =>
+        isPlausibleYear(year) ? match.replace(year, yearToSpoken(year)) : match
+      );
+      t = t.replace(/\bthe\s+(\d{4})\b/gi, (match, year) =>
+        isPlausibleYear(year) ? match.replace(year, yearToSpoken(year)) : match
+      );
+      t = t.replace(/\b(\d{4})\s*[-–—]\s*(\d{4})\b/g, (match, a, b) =>
+        isPlausibleYear(a) && isPlausibleYear(b) ? `${yearToSpoken(a)} to ${yearToSpoken(b)}` : match
+      );
+      t = t.replace(/\((\d{4})\)/g, (match, year) =>
+        isPlausibleYear(year) ? `(${yearToSpoken(year)})` : match
+      );
+
+      t = t.replace(/\b(\d{4})\b/g, (match, year, offset, whole) => {
+        if (!isPlausibleYear(year)) return match;
+        const prefix = whole.slice(0, offset);
+        const after = whole.slice(offset + match.length);
+        if (KOKORO_YEAR_EXCLUDE_PREFIX.test(prefix)) return match;
+        if (offset > 0 && '$£€¥#'.includes(whole[offset - 1])) return match;
+        if (KOKORO_YEAR_EXCLUDE_SUFFIX.test(after)) return match;
+        return yearToSpoken(year);
+      });
+
+      return t;
+    }
+
     function normalizeDecadesForKokoro(text) {
       if (!text) return text;
       let t = text.normalize('NFKC');
@@ -1434,6 +1517,9 @@
         if (dec === '00') return 'two thousands';
         return KOKORO_DECADE_MAP[dec] || (dec + 's');
       });
+
+      // 2.5. 4桁西暦 (文脈判定付き: in 1998 → nineteen ninety eight 等)
+      t = normalizeYearsForKokoro(t);
 
       // 3. 単位略語 (5kg → 5 kilograms 等)。曖昧単位 (m/g/l/in/w) は数字密着のみ。
       const spokenUnit = (number, unitKey) => {

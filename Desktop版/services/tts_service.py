@@ -68,6 +68,39 @@ UNIT_MAP = {
 # 単独でも一般英単語になり得る単位。数字に密着した場合のみ展開する (例: 5m, 2in)。
 _AMBIGUOUS_UNITS = frozenset({'in', 'm', 'g', 'l', 'w'})
 
+# 4桁西暦の Spoken form 用
+_YEAR_ONES = (
+    '', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'
+)
+_YEAR_TEENS = (
+    'ten', 'eleven', 'twelve', 'thirteen', 'fourteen',
+    'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'
+)
+_YEAR_TENS = (
+    '', '', 'twenty', 'thirty', 'forty', 'fifty',
+    'sixty', 'seventy', 'eighty', 'ninety'
+)
+
+# 年号の強い文脈前置詞
+_YEAR_PREPS = (
+    r'in|since|until|till|by|from|during|before|after|around|about'
+)
+
+# 直前にあると年号扱いしない語 (room 1998 等)
+_YEAR_EXCLUDE_PREFIX = (
+    r'room|page|flight|highway|apt|apartment|suite|gate|channel|'
+    r'isbn|number|no\.?|nr\.?|code|id|pin|#|\$|£|€|¥'
+)
+
+# 直後にあると数量扱い（年号にしない）
+_YEAR_EXCLUDE_SUFFIX = (
+    r'people|persons|users|dollars?|yen|times|copies|items|units|'
+    r'soldiers|troops|men|women|children|students|employees|years'
+)
+
+# 年号として扱う範囲 (2桁+2桁読みが自然な西暦)
+_YEAR_MIN, _YEAR_MAX = 1100, 2199
+
 try:
     import win32com.client
     HAS_SAPI = True
@@ -205,12 +238,187 @@ class TTSService:
 
     @classmethod
     def normalize_english_for_tts(cls, text: str) -> str:
-        """英語 TTS 向けの事前正規化（全角半角化・年代・単位略語）。"""
+        """英語 TTS 向けの事前正規化（全角半角化・年代・西暦・単位略語）。"""
         if not text:
             return text
         text = unicodedata.normalize('NFKC', text)
         text = cls.normalize_english_decades(text)
+        text = cls.normalize_english_years(text)
         text = cls.normalize_english_units(text)
+        return text
+
+    @staticmethod
+    def _two_digit_words(n: int) -> str:
+        """0–99 を英語単語に。0 は空文字。"""
+        if n <= 0:
+            return ''
+        if n < 10:
+            return _YEAR_ONES[n]
+        if n < 20:
+            return _YEAR_TEENS[n - 10]
+        tens, ones = divmod(n, 10)
+        if ones == 0:
+            return _YEAR_TENS[tens]
+        return f'{_YEAR_TENS[tens]} {_YEAR_ONES[ones]}'
+
+    @classmethod
+    def year_to_spoken(cls, year: int | str) -> str:
+        """
+        4桁西暦を year-style 読みに変換する。
+        例: 1998 → nineteen ninety eight / 1905 → nineteen oh five / 2000 → two thousand
+        """
+        try:
+            y = int(year)
+        except (TypeError, ValueError):
+            return str(year)
+
+        if y == 2000:
+            return 'two thousand'
+
+        left, right = divmod(y, 100)
+        left_words = cls._two_digit_words(left)
+        if not left_words:
+            return str(y)
+
+        if right == 0:
+            return f'{left_words} hundred'
+        if right < 10:
+            return f'{left_words} oh {_YEAR_ONES[right]}'
+        return f'{left_words} {cls._two_digit_words(right)}'
+
+    @classmethod
+    def _is_plausible_year(cls, year: int | str) -> bool:
+        try:
+            y = int(year)
+        except (TypeError, ValueError):
+            return False
+        return _YEAR_MIN <= y <= _YEAR_MAX
+
+    @classmethod
+    def normalize_english_years(cls, text: str) -> str:
+        """
+        文脈上の4桁西暦を nineteen ninety eight 形式に展開する。
+        Kokoro が one thousand nine hundred ... と誤読するのを防ぐ。
+
+        判定（強い文脈優先）:
+        1. between A and B / from A to B
+        2. 前置詞 + YYYY（in/since/until/…）
+        3. (the) year YYYY
+        4. the YYYY
+        5. (YYYY) / YYYY–YYYY 範囲
+        6. 単独 YYYY（1100–2199）※ room/page/flight 等の直後は除外
+        """
+        if not text:
+            return text
+
+        def spoken(m_year: str) -> str:
+            return cls.year_to_spoken(m_year)
+
+        def _followed_by_quantity(after: str) -> bool:
+            return bool(re.match(rf'(?i)\s+(?:{_YEAR_EXCLUDE_SUFFIX})\b', after))
+
+        # 1. between 1998 and 2001 / from 1998 to 2005（元の大文字小文字を維持）
+        def repl_between(m):
+            a, b = m.group(1), m.group(2)
+            if cls._is_plausible_year(a) and cls._is_plausible_year(b):
+                return m.group(0).replace(a, spoken(a), 1).replace(b, spoken(b), 1)
+            return m.group(0)
+
+        def repl_from_to(m):
+            a, b = m.group(1), m.group(2)
+            if cls._is_plausible_year(a) and cls._is_plausible_year(b):
+                return m.group(0).replace(a, spoken(a), 1).replace(b, spoken(b), 1)
+            return m.group(0)
+
+        text = re.sub(
+            r'\bbetween\s+(\d{4})\s+and\s+(\d{4})\b',
+            repl_between,
+            text,
+            flags=re.IGNORECASE,
+        )
+        text = re.sub(
+            r'\bfrom\s+(\d{4})\s+to\s+(\d{4})\b',
+            repl_from_to,
+            text,
+            flags=re.IGNORECASE,
+        )
+
+        # 2. 前置詞 + YYYY（および AD/BC/CE/BCE）※直後が people 等ならスキップ
+        def repl_prep(m):
+            year = m.group(2)
+            if not cls._is_plausible_year(year):
+                return m.group(0)
+            after = text[m.end():]
+            if _followed_by_quantity(after):
+                return m.group(0)
+            return m.group(0).replace(year, spoken(year), 1)
+
+        text = re.sub(
+            rf'\b({_YEAR_PREPS})\s+(\d{{4}})(\s*(?:AD|BC|CE|BCE))?\b',
+            repl_prep,
+            text,
+            flags=re.IGNORECASE,
+        )
+
+        # 3. (the) year 1998
+        def repl_year_kw(m):
+            year = m.group(2)
+            if not cls._is_plausible_year(year):
+                return m.group(0)
+            return m.group(0).replace(year, spoken(year), 1)
+
+        text = re.sub(
+            r'\b((?:the\s+)?year\s+)(\d{4})\b',
+            repl_year_kw,
+            text,
+            flags=re.IGNORECASE,
+        )
+
+        # 4. the 1998 (election 等)
+        def repl_the(m):
+            year = m.group(1)
+            if not cls._is_plausible_year(year):
+                return m.group(0)
+            return m.group(0).replace(year, spoken(year), 1)
+
+        text = re.sub(r'\bthe\s+(\d{4})\b', repl_the, text, flags=re.IGNORECASE)
+
+        # 5a. 範囲 1998-2005 / 1998–2005
+        def repl_range(m):
+            a, b = m.group(1), m.group(2)
+            if cls._is_plausible_year(a) and cls._is_plausible_year(b):
+                return f'{spoken(a)} to {spoken(b)}'
+            return m.group(0)
+
+        text = re.sub(r'\b(\d{4})\s*[-–—]\s*(\d{4})\b', repl_range, text)
+
+        # 5b. 括弧 (1998)
+        def repl_paren(m):
+            year = m.group(1)
+            if not cls._is_plausible_year(year):
+                return m.group(0)
+            return f'({spoken(year)})'
+
+        text = re.sub(r'\((\d{4})\)', repl_paren, text)
+
+        # 6. 単独 YYYY（除外プレフィックス／数量サフィックスはスキップ）
+        def repl_bare(m):
+            year = m.group(1)
+            if not cls._is_plausible_year(year):
+                return m.group(0)
+            start, end = m.start(), m.end()
+            prefix = text[:start]
+            after = text[end:]
+            if re.search(rf'(?i)(?:{_YEAR_EXCLUDE_PREFIX})\s*$', prefix):
+                return m.group(0)
+            if start > 0 and text[start - 1] in '$£€¥#':
+                return m.group(0)
+            if _followed_by_quantity(after):
+                return m.group(0)
+            return spoken(year)
+
+        text = re.sub(r'\b(\d{4})\b', repl_bare, text)
+
         return text
 
     @staticmethod
