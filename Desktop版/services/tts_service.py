@@ -397,6 +397,92 @@ class TTSService:
         return output_path
 
     # -------------------------------------------------------------
+    # 文区切り・特定記号による無音挿入（アプリ側制御）
+    # -------------------------------------------------------------
+    @staticmethod
+    def split_text_for_pauses(
+        text: str,
+        *,
+        sentence_pause_sec: float = 0.5,
+        pause_marker: str = "/",
+        marker_pause_sec: float = 0.3,
+    ) -> List[tuple]:
+        """
+        文末 (. ? !) と特定記号ランの直後でテキストを分割し、
+        [(読み上げテキスト, 直後の無音秒), ...] を返す。
+
+        - 文末記号は読み上げテキストに残す（イントネーション用）。
+        - 特定記号（デフォルト /）は読み上げから除去する。
+        - // はマーカー無音が2回分（2倍）。/// は3倍、以下同様。
+        - 小数点 (3.14) のピリオドでは分割しない。
+        - 末尾セグメントの直後無音は 0（ブロック間無音は呼び出し側で付与）。
+        """
+        if not text:
+            return []
+
+        marker = pause_marker if pause_marker else "/"
+        sentence_pause_sec = max(0.0, float(sentence_pause_sec))
+        marker_pause_sec = max(0.0, float(marker_pause_sec))
+
+        segments: List[tuple] = []
+        buf: List[str] = []
+        i = 0
+        n = len(text)
+
+        def flush_with_pause(pause: float):
+            seg = "".join(buf).strip()
+            buf.clear()
+            if seg:
+                segments.append((seg, pause))
+            elif segments and pause > 0:
+                prev_text, prev_pause = segments[-1]
+                segments[-1] = (prev_text, prev_pause + pause)
+
+        while i < n:
+            if marker and text.startswith(marker, i):
+                count = 0
+                while text.startswith(marker, i):
+                    count += 1
+                    i += len(marker)
+                flush_with_pause(round(marker_pause_sec * count, 1))
+                continue
+
+            ch = text[i]
+            if ch in ".?!":
+                # 小数: 数字.数字 は文末にしない
+                if (
+                    ch == "."
+                    and i > 0
+                    and text[i - 1].isdigit()
+                    and i + 1 < n
+                    and text[i + 1].isdigit()
+                ):
+                    buf.append(ch)
+                    i += 1
+                    continue
+
+                while i < n and text[i] in ".?!":
+                    buf.append(text[i])
+                    i += 1
+                # 閉じ引用などがあればセグメントに含める
+                while i < n and text[i] in "\"'」』）)]":
+                    buf.append(text[i])
+                    i += 1
+                flush_with_pause(sentence_pause_sec)
+                continue
+
+            buf.append(ch)
+            i += 1
+
+        flush_with_pause(0.0)
+
+        if segments:
+            last_text, _ = segments[-1]
+            segments[-1] = (last_text, 0.0)
+
+        return segments
+
+    # -------------------------------------------------------------
     # 対話台本の結合合成 (Dialogue Synthesize & Merge)
     # -------------------------------------------------------------
     def synthesize_dialogue(
@@ -409,7 +495,11 @@ class TTSService:
         sample_rate: int = 24000,
         channels: int = 1,
         bitrate_kbps: int = 128,
-        output_path: Optional[str | Path] = None
+        output_path: Optional[str | Path] = None,
+        pause_control_enabled: bool = False,
+        sentence_pause_sec: float = 0.5,
+        pause_marker: str = "/",
+        marker_pause_sec: float = 0.3,
     ) -> Path:
         if not blocks:
             raise ValueError("対話ブロックが空です")
@@ -420,34 +510,60 @@ class TTSService:
         output_path = Path(output_path)
 
         temp_wavs: List[Path] = []
+        # 各 WAV の直後に入れる無音秒（最後は通常 0）
+        gap_after: List[float] = []
         raw_combined_wav = self.output_dir / f"_temp_combined_{os.urandom(4).hex()}.wav"
 
+        def _synth_one(text: str, voice_id: str, temp_path: Path):
+            if engine == "kokoro":
+                self.synthesize_kokoro(text, voice_name=voice_id or "af_heart", speed=speed, output_path=temp_path)
+            elif engine == "piper":
+                self.synthesize_piper(text, model_key=voice_id or "piper_ja", output_path=temp_path)
+            else:
+                rate_val = int((speed - 1.0) * 10)
+                self.synthesize_sapi(text, voice_name=voice_id, rate=rate_val, volume=100, output_path=temp_path)
+
         try:
-            for i, b in enumerate(blocks):
+            nonempty_blocks = [(i, b) for i, b in enumerate(blocks) if b.get("text", "").strip()]
+            for bi, (i, b) in enumerate(nonempty_blocks):
                 text = b.get("text", "").strip()
-                if not text:
-                    continue
-
-                temp_path = self.output_dir / f"_temp_block_{i}_{os.urandom(4).hex()}.wav"
                 v_id = b.get("voice", "")
+                is_last_block = bi == len(nonempty_blocks) - 1
 
-                if engine == "kokoro":
-                    self.synthesize_kokoro(text, voice_name=v_id or "af_heart", speed=speed, output_path=temp_path)
-                elif engine == "piper":
-                    self.synthesize_piper(text, model_key=v_id or "piper_ja", output_path=temp_path)
-                else: # sapi
-                    rate_val = int((speed - 1.0) * 10) # 1.0 -> 0, 0.5 -> -5, 2.0 -> 10
-                    self.synthesize_sapi(text, voice_name=v_id, rate=rate_val, volume=100, output_path=temp_path)
-
-                temp_wavs.append(temp_path)
+                if pause_control_enabled:
+                    parts = self.split_text_for_pauses(
+                        text,
+                        sentence_pause_sec=sentence_pause_sec,
+                        pause_marker=pause_marker,
+                        marker_pause_sec=marker_pause_sec,
+                    )
+                    if not parts:
+                        continue
+                    for j, (seg_text, pause_after) in enumerate(parts):
+                        if not seg_text.strip():
+                            continue
+                        temp_path = self.output_dir / f"_temp_block_{i}_{j}_{os.urandom(4).hex()}.wav"
+                        _synth_one(seg_text, v_id, temp_path)
+                        temp_wavs.append(temp_path)
+                        # ブロック末尾セグメントの後は、次ブロックがあるときだけブロック間無音を加算
+                        if j == len(parts) - 1 and not is_last_block:
+                            gap_after.append(pause_after + silence_sec)
+                        else:
+                            gap_after.append(pause_after)
+                else:
+                    temp_path = self.output_dir / f"_temp_block_{i}_{os.urandom(4).hex()}.wav"
+                    _synth_one(text, v_id, temp_path)
+                    temp_wavs.append(temp_path)
+                    gap_after.append(0.0 if is_last_block else silence_sec)
 
             if not temp_wavs:
                 raise ValueError("合成可能なテキストブロックがありませんでした")
 
-            # 1. まず一時結合WAVを生成
-            self.merge_wavs(temp_wavs, raw_combined_wav, silence_sec=silence_sec)
+            # gap_after は wav と同数。末尾の無音は結合時に使わない
+            silence_gaps = gap_after[:-1] if len(gap_after) > 1 else []
 
-            # 2. 指定されたフォーマット・サンプルレート・チャンネル・ビットレートへ変換
+            self.merge_wavs(temp_wavs, raw_combined_wav, silence_sec=silence_sec, silence_gaps=silence_gaps)
+
             AudioConverter.convert(
                 input_wav=raw_combined_wav,
                 output_path=output_path,
@@ -458,7 +574,6 @@ class TTSService:
             )
 
         finally:
-            # 一時ファイルの削除
             for p in temp_wavs:
                 try:
                     if p.exists():
@@ -474,8 +589,13 @@ class TTSService:
         return output_path
 
     @staticmethod
-    def merge_wavs(wav_paths: List[Path], output_path: Path, silence_sec: float = 0.3):
-        """複数のWAVファイルをリサンプリング・チャンネル統一して結合"""
+    def merge_wavs(
+        wav_paths: List[Path],
+        output_path: Path,
+        silence_sec: float = 0.3,
+        silence_gaps: Optional[List[float]] = None,
+    ):
+        """複数のWAVを結合。silence_gaps があれば各境界の無音秒を個別指定。"""
         if not wav_paths:
             return
 
@@ -485,14 +605,22 @@ class TTSService:
             n_channels = params.nchannels
             sampwidth = params.sampwidth
 
-        silence_frames_count = int(sample_rate * silence_sec)
-        silence_data = b"\x00" * (silence_frames_count * n_channels * sampwidth)
+        def _silence_bytes(sec: float) -> bytes:
+            if sec <= 0:
+                return b""
+            frames = int(sample_rate * sec)
+            return b"\x00" * (frames * n_channels * sampwidth)
 
         with wave.open(str(output_path), "wb") as out_wav:
             out_wav.setparams(params)
             for idx, p in enumerate(wav_paths):
                 with wave.open(str(p), "rb") as w:
-                    frames = w.readframes(w.getnframes())
-                    out_wav.writeframes(frames)
-                if idx < len(wav_paths) - 1 and silence_sec > 0:
-                    out_wav.writeframes(silence_data)
+                    out_wav.writeframes(w.readframes(w.getnframes()))
+                if idx < len(wav_paths) - 1:
+                    if silence_gaps is not None and idx < len(silence_gaps):
+                        gap = silence_gaps[idx]
+                    else:
+                        gap = silence_sec
+                    silence_data = _silence_bytes(gap)
+                    if silence_data:
+                        out_wav.writeframes(silence_data)

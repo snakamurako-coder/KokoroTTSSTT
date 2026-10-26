@@ -4,7 +4,8 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QTextEdit, QLineEdit, QComboBox, QSlider, QScrollArea,
     QFileDialog, QMessageBox, QGroupBox, QFrame, QDialog,
-    QProgressBar, QCheckBox, QStyle, QStyleOptionSlider
+    QProgressBar, QCheckBox, QStyle, QStyleOptionSlider,
+    QDoubleSpinBox,
 )
 from PySide6.QtCore import Qt, Signal
 from services.tts_service import TTSService
@@ -295,36 +296,92 @@ class TTSPage(QWidget):
             }
         """)
         self.advanced_frame.setVisible(False)
-        adv_layout = QHBoxLayout(self.advanced_frame)
-        adv_layout.setSpacing(16)
+        adv_layout = QVBoxLayout(self.advanced_frame)
+        adv_layout.setSpacing(10)
 
-        # サンプルレート
+        # --- 音質行 ---
+        quality_row = QHBoxLayout()
+        quality_row.setSpacing(16)
+
         self.sr_combo = QComboBox()
         self.sr_combo.addItem("44.1 kHz (高音質CD標準)", 44100)
         self.sr_combo.addItem("24.0 kHz (Kokoro標準)", 24000)
         self.sr_combo.addItem("22.05 kHz (Piper標準)", 22050)
         self.sr_combo.addItem("16.0 kHz (軽量・音声標準)", 16000)
-        self.sr_combo.setCurrentIndex(1) # 24kHz
+        self.sr_combo.setCurrentIndex(1)  # 24kHz
 
-        # チャンネル
         self.ch_combo = QComboBox()
         self.ch_combo.addItem("モノラル (1ch)", 1)
         self.ch_combo.addItem("ステレオ (2ch)", 2)
 
-        # ビットレート (MP3 / WebM用)
         self.br_combo = QComboBox()
         self.br_combo.addItem("192 kbps (高音質)", 192)
         self.br_combo.addItem("128 kbps (標準・推奨)", 128)
         self.br_combo.addItem("256 kbps (最高品質)", 256)
         self.br_combo.addItem("64 kbps (超軽量)", 64)
-        self.br_combo.setCurrentIndex(1) # 128 kbps
+        self.br_combo.setCurrentIndex(1)  # 128 kbps
 
-        adv_layout.addWidget(QLabel("サンプルレート:"))
-        adv_layout.addWidget(self.sr_combo)
-        adv_layout.addWidget(QLabel("チャンネル:"))
-        adv_layout.addWidget(self.ch_combo)
-        adv_layout.addWidget(QLabel("ビットレート:"))
-        adv_layout.addWidget(self.br_combo)
+        quality_row.addWidget(QLabel("サンプルレート:"))
+        quality_row.addWidget(self.sr_combo)
+        quality_row.addWidget(QLabel("チャンネル:"))
+        quality_row.addWidget(self.ch_combo)
+        quality_row.addWidget(QLabel("ビットレート:"))
+        quality_row.addWidget(self.br_combo)
+        quality_row.addStretch()
+        adv_layout.addLayout(quality_row)
+
+        # --- 空白時間指定 ---
+        self.pause_check = QCheckBox("空白時間指定（文末・特定記号の後に無音を挿入）")
+        self.pause_check.setStyleSheet("color: #c4b5fd; font-weight: bold; font-size: 12px;")
+        self.pause_check.setChecked(False)
+        self.pause_check.toggled.connect(self._toggle_pause_controls)
+        adv_layout.addWidget(self.pause_check)
+
+        self.pause_controls = QWidget()
+        self.pause_controls.setVisible(False)
+        pause_layout = QVBoxLayout(self.pause_controls)
+        pause_layout.setContentsMargins(8, 0, 0, 0)
+        pause_layout.setSpacing(8)
+
+        sentence_row = QHBoxLayout()
+        sentence_row.addWidget(QLabel("文末 (. ? !) の後:"))
+        self.sentence_pause_spin = QDoubleSpinBox()
+        self.sentence_pause_spin.setRange(0.1, 2.0)
+        self.sentence_pause_spin.setSingleStep(0.1)
+        self.sentence_pause_spin.setDecimals(1)
+        self.sentence_pause_spin.setValue(0.5)
+        self.sentence_pause_spin.setSuffix(" 秒")
+        self.sentence_pause_spin.setFixedWidth(100)
+        sentence_row.addWidget(self.sentence_pause_spin)
+        sentence_row.addStretch()
+        pause_layout.addLayout(sentence_row)
+
+        marker_row = QHBoxLayout()
+        marker_row.addWidget(QLabel("特定記号:"))
+        self.pause_marker_edit = QLineEdit("/")
+        self.pause_marker_edit.setMaxLength(8)
+        self.pause_marker_edit.setFixedWidth(56)
+        self.pause_marker_edit.setToolTip("文中の区切り記号。連続すると無音が倍数になります（例: // = 2倍）")
+        marker_row.addWidget(self.pause_marker_edit)
+        marker_row.addWidget(QLabel("の後:"))
+        self.marker_pause_spin = QDoubleSpinBox()
+        self.marker_pause_spin.setRange(0.1, 2.0)
+        self.marker_pause_spin.setSingleStep(0.1)
+        self.marker_pause_spin.setDecimals(1)
+        self.marker_pause_spin.setValue(0.3)
+        self.marker_pause_spin.setSuffix(" 秒")
+        self.marker_pause_spin.setFixedWidth(100)
+        marker_row.addWidget(self.marker_pause_spin)
+        marker_row.addWidget(QLabel("（ // で2倍、/// で3倍 … ）"))
+        marker_row.addStretch()
+        pause_layout.addLayout(marker_row)
+
+        pause_hint = QLabel("オフ時は従来どおり（ブロック間 0.3 秒のみ）。オン時は文を分割して合成し、指定無音を挿入します。特定記号自体は読み上げません。")
+        pause_hint.setWordWrap(True)
+        pause_hint.setStyleSheet("color: #94a3b8; font-size: 11px;")
+        pause_layout.addWidget(pause_hint)
+
+        adv_layout.addWidget(self.pause_controls)
         set_layout.addWidget(self.advanced_frame)
 
         main_layout.addWidget(settings_group)
@@ -439,6 +496,9 @@ class TTSPage(QWidget):
 
     def _toggle_advanced_settings(self, checked):
         self.advanced_frame.setVisible(checked)
+
+    def _toggle_pause_controls(self, checked):
+        self.pause_controls.setVisible(checked)
 
     def _on_format_changed(self):
         ext = self.format_combo.currentData()
@@ -574,6 +634,8 @@ class TTSPage(QWidget):
             self.current_audio_path = None
 
         try:
+            pause_on = self.pause_check.isChecked()
+            marker = self.pause_marker_edit.text().strip() or "/"
             out_path = self.tts.synthesize_dialogue(
                 block_data,
                 engine=engine,
@@ -581,7 +643,11 @@ class TTSPage(QWidget):
                 format_type=format_type,
                 sample_rate=sample_rate,
                 channels=channels,
-                bitrate_kbps=bitrate_kbps
+                bitrate_kbps=bitrate_kbps,
+                pause_control_enabled=pause_on,
+                sentence_pause_sec=self.sentence_pause_spin.value(),
+                pause_marker=marker,
+                marker_pause_sec=self.marker_pause_spin.value(),
             )
             self.current_audio_path = out_path
             self.player.load(out_path)

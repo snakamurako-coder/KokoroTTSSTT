@@ -713,6 +713,30 @@
               </select>
             </div>
           </div>
+
+          <div class="pause-control-block">
+            <label class="advanced-toggle" style="margin-bottom: 8px;">
+              <input type="checkbox" id="kokoroPauseEnable" style="width: auto; margin: 0;">
+              空白時間指定（文末・特定記号の後に無音を挿入）
+            </label>
+            <div id="kokoroPauseControls" style="display: none; flex-direction: column; gap: 10px; padding-left: 8px;">
+              <div class="flex-row">
+                <div>
+                  <label>文末 (. ? !) の後</label>
+                  <input type="number" id="kokoroSentencePause" min="0.1" max="2.0" step="0.1" value="0.5">
+                </div>
+                <div>
+                  <label>特定記号</label>
+                  <input type="text" id="kokoroPauseMarker" value="/" maxlength="8" style="width: 64px;">
+                </div>
+                <div>
+                  <label>記号の後（秒）</label>
+                  <input type="number" id="kokoroMarkerPause" min="0.1" max="2.0" step="0.1" value="0.3">
+                </div>
+              </div>
+              <div class="hint" style="margin: 0;">オフ時は従来どおり（区間間 0.3 秒）。// は無音2倍、/// は3倍。特定記号自体は読み上げません。</div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -803,6 +827,30 @@
               </select>
             </div>
           </div>
+
+          <div class="pause-control-block">
+            <label class="advanced-toggle" style="margin-bottom: 8px;">
+              <input type="checkbox" id="piperPauseEnable" style="width: auto; margin: 0;">
+              空白時間指定（文末・特定記号の後に無音を挿入）
+            </label>
+            <div id="piperPauseControls" style="display: none; flex-direction: column; gap: 10px; padding-left: 8px;">
+              <div class="flex-row">
+                <div>
+                  <label>文末 (. ? !) の後</label>
+                  <input type="number" id="piperSentencePause" min="0.1" max="2.0" step="0.1" value="0.5">
+                </div>
+                <div>
+                  <label>特定記号</label>
+                  <input type="text" id="piperPauseMarker" value="/" maxlength="8" style="width: 64px;">
+                </div>
+                <div>
+                  <label>記号の後（秒）</label>
+                  <input type="number" id="piperMarkerPause" min="0.1" max="2.0" step="0.1" value="0.3">
+                </div>
+              </div>
+              <div class="hint" style="margin: 0;">オフ時は従来どおり（区間間 0.3 秒）。// は無音2倍、/// は3倍。特定記号自体は読み上げません。</div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -863,6 +911,30 @@
           <div>
             <label style="margin-bottom: 0;">音量: <span id="browserVolumeDisplay" style="color: var(--browser-accent);">1.0</span></label>
             <input type="range" id="browserVolume" min="0.0" max="1.0" step="0.1" value="1.0">
+          </div>
+
+          <div class="pause-control-block">
+            <label class="advanced-toggle" style="margin-bottom: 8px;">
+              <input type="checkbox" id="browserPauseEnable" style="width: auto; margin: 0;">
+              空白時間指定（文末・特定記号の後に無音を挿入）
+            </label>
+            <div id="browserPauseControls" style="display: none; flex-direction: column; gap: 10px; padding-left: 8px;">
+              <div class="flex-row">
+                <div>
+                  <label>文末 (. ? !) の後</label>
+                  <input type="number" id="browserSentencePause" min="0.1" max="2.0" step="0.1" value="0.5">
+                </div>
+                <div>
+                  <label>特定記号</label>
+                  <input type="text" id="browserPauseMarker" value="/" maxlength="8" style="width: 64px;">
+                </div>
+                <div>
+                  <label>記号の後（秒）</label>
+                  <input type="number" id="browserMarkerPause" min="0.1" max="2.0" step="0.1" value="0.3">
+                </div>
+              </div>
+              <div class="hint" style="margin: 0;">オフ時は従来どおり連続読み上げ。オン時は文末・特定記号の後で待機します。// は2倍。</div>
+            </div>
           </div>
         </div>
       </div>
@@ -1395,6 +1467,116 @@
       return t;
     }
 
+    /**
+     * 文末 (.?!) と特定記号ランで分割し [{text, pauseAfter}, ...] を返す。
+     * 特定記号は読み上げから除去。// は markerPause の2倍。末尾 pauseAfter は 0。
+     */
+    function splitTextForPauses(text, { sentencePause = 0.5, marker = '/', markerPause = 0.3 } = {}) {
+      if (!text) return [];
+      const m = marker || '/';
+      const sentencePauseSec = Math.max(0, Number(sentencePause) || 0);
+      const markerPauseSec = Math.max(0, Number(markerPause) || 0);
+      const segments = [];
+      let buf = '';
+      let i = 0;
+
+      const flush = (pause) => {
+        const seg = buf.trim();
+        buf = '';
+        if (seg) {
+          segments.push({ text: seg, pauseAfter: pause });
+        } else if (segments.length && pause > 0) {
+          segments[segments.length - 1].pauseAfter += pause;
+        }
+      };
+
+      while (i < text.length) {
+        if (m && text.startsWith(m, i)) {
+          let count = 0;
+          while (text.startsWith(m, i)) {
+            count += 1;
+            i += m.length;
+          }
+          flush(Math.round(markerPauseSec * count * 10) / 10);
+          continue;
+        }
+
+        const ch = text[i];
+        if (ch === '.' || ch === '?' || ch === '!') {
+          if (
+            ch === '.' &&
+            i > 0 &&
+            /\d/.test(text[i - 1]) &&
+            i + 1 < text.length &&
+            /\d/.test(text[i + 1])
+          ) {
+            buf += ch;
+            i += 1;
+            continue;
+          }
+          while (i < text.length && '.?!'.includes(text[i])) {
+            buf += text[i];
+            i += 1;
+          }
+          while (i < text.length && `"'」』）)]`.includes(text[i])) {
+            buf += text[i];
+            i += 1;
+          }
+          flush(sentencePauseSec);
+          continue;
+        }
+
+        buf += ch;
+        i += 1;
+      }
+
+      flush(0);
+      if (segments.length) segments[segments.length - 1].pauseAfter = 0;
+      return segments;
+    }
+
+    function getPauseSettings(prefix) {
+      const enabled = !!document.getElementById(`${prefix}PauseEnable`)?.checked;
+      if (!enabled) {
+        return { enabled: false, sentencePause: 0.5, marker: '/', markerPause: 0.3 };
+      }
+      const clamp = (v, def) => {
+        const n = parseFloat(v);
+        if (Number.isNaN(n)) return def;
+        return Math.min(2.0, Math.max(0.1, Math.round(n * 10) / 10));
+      };
+      return {
+        enabled: true,
+        sentencePause: clamp(document.getElementById(`${prefix}SentencePause`)?.value, 0.5),
+        marker: (document.getElementById(`${prefix}PauseMarker`)?.value || '/').trim() || '/',
+        markerPause: clamp(document.getElementById(`${prefix}MarkerPause`)?.value, 0.3),
+      };
+    }
+
+    function concatPcmWithGaps(chunks, sampleRate, gaps) {
+      let total = chunks.reduce((sum, arr) => sum + arr.length, 0);
+      for (const g of gaps) total += Math.max(0, Math.floor(sampleRate * g));
+      const pcm = new Float32Array(total);
+      let offset = 0;
+      for (let i = 0; i < chunks.length; i++) {
+        pcm.set(chunks[i], offset);
+        offset += chunks[i].length;
+        if (i < gaps.length) {
+          offset += Math.max(0, Math.floor(sampleRate * gaps[i]));
+        }
+      }
+      return pcm;
+    }
+
+    function wirePauseToggle(prefix) {
+      const enableEl = document.getElementById(`${prefix}PauseEnable`);
+      const controlsEl = document.getElementById(`${prefix}PauseControls`);
+      if (!enableEl || !controlsEl) return;
+      enableEl.addEventListener('change', () => {
+        controlsEl.style.display = enableEl.checked ? 'flex' : 'none';
+      });
+    }
+
     const kokoroDownloadBtn = document.getElementById('kokoroDownloadBtn');
     const kokoroGenerateBtn = document.getElementById('kokoroGenerateBtn');
     const kokoroProgressBar = document.getElementById('kokoroProgressBar');
@@ -1467,6 +1649,7 @@
     document.getElementById('kokoroToggleAdvanced').addEventListener('change', (e) => {
       document.getElementById('kokoroAdvancedSettings').style.display = e.target.checked ? 'flex' : 'none';
     });
+    wirePauseToggle('kokoro');
     document.getElementById('kokoroSpeechSpeed').addEventListener('input', (e) => {
       document.getElementById('kokoroSpeedDisplay').innerText = Number(e.target.value).toFixed(1);
     });
@@ -1488,38 +1671,62 @@
         kokoroResultArea.style.display = 'none';
         
         let combinedAudio = [];
+        let gapAfter = [];
         let originalSampleRate = null;
         const speedParam = parseFloat(document.getElementById('kokoroSpeechSpeed').value);
+        const pauseSettings = getPauseSettings('kokoro');
+        const blockGap = 0.3;
 
-        for (let b = 0; b < blocks.length; b++) {
-          const block = blocks[b];
+        const nonemptyBlocks = [...blocks].filter(block => block.querySelector('.block-text').value.trim());
+
+        for (let b = 0; b < nonemptyBlocks.length; b++) {
+          const block = nonemptyBlocks[b];
           const voiceId = block.querySelector('.block-voice').value;
           const speakerName = block.querySelector('.block-speaker-name').value.trim();
           const voiceLabel = block.querySelector('.block-voice').options[block.querySelector('.block-voice').selectedIndex].text.split(' ')[0];
           const displaySpeaker = speakerName ? speakerName : voiceLabel;
-          
-          const blockText = block.querySelector('.block-text').value.trim();
-          if (!blockText) continue;
-          
-          const lines = blockText.split('\n');
-          for (let i = 0; i < lines.length; i++) {
-            let line = lines[i].trim();
+          const isLastBlock = b === nonemptyBlocks.length - 1;
+          const rawBlockText = block.querySelector('.block-text').value.trim();
+
+          // 行ごとに前処理し、空白時間ON時はブロック全体をまとめて分割
+          const preparedLines = [];
+          for (const rawLine of rawBlockText.split('\n')) {
+            let line = rawLine.trim();
             if (!line) continue;
-            
             line = line.replace(/^\[?(US_F1|US_F2|US_M1|US_M2|UK_F|UK_M|JP_F1|JP_F2|JP_F3|JP_F4|JP_M1|Takumi|つくよみちゃん|女性|男性|話者[0-9]+)\]?[:：]\s*/i, '');
             if (!line) continue;
-            
-            // 年代表記 (1980s, 1980's, '80s等) を自然な英語読み (nineteen eighties等) に事前正規化
-            line = normalizeDecadesForKokoro(line);
-            
-            kokoroStatusText.innerText = `音声生成中... (${displaySpeaker} - ブロック ${b + 1}/${blocks.length}, 行 ${i + 1}/${lines.length})`;
-            
-            const result = await kokoroSynthesizer.generate(line, { voice: voiceId, speed: speedParam });
-            
-            if (!originalSampleRate) {
-              originalSampleRate = result.sampling_rate;
+            preparedLines.push(normalizeDecadesForKokoro(line));
+          }
+          if (!preparedLines.length) continue;
+
+          let workItems;
+          if (pauseSettings.enabled) {
+            workItems = splitTextForPauses(preparedLines.join(' '), pauseSettings);
+          } else {
+            workItems = preparedLines.map((t, idx) => ({
+              text: t,
+              pauseAfter: (idx < preparedLines.length - 1 || !isLastBlock) ? blockGap : 0,
+            }));
+            // 非最終ブロックの最終行にも blockGap を残すため、上で既に設定済み
+            if (!isLastBlock && workItems.length) {
+              workItems[workItems.length - 1].pauseAfter = blockGap;
+            } else if (isLastBlock && workItems.length) {
+              workItems[workItems.length - 1].pauseAfter = 0;
             }
+          }
+
+          for (let p = 0; p < workItems.length; p++) {
+            const part = workItems[p];
+            if (!part.text.trim()) continue;
+            kokoroStatusText.innerText = `音声生成中... (${displaySpeaker} - ブロック ${b + 1}/${nonemptyBlocks.length}, 片 ${p + 1}/${workItems.length})`;
+            const result = await kokoroSynthesizer.generate(part.text, { voice: voiceId, speed: speedParam });
+            if (!originalSampleRate) originalSampleRate = result.sampling_rate;
             combinedAudio.push(result.audio);
+            let gap = part.pauseAfter || 0;
+            if (pauseSettings.enabled && p === workItems.length - 1 && !isLastBlock) {
+              gap += blockGap;
+            }
+            gapAfter.push(gap);
           }
         }
 
@@ -1527,18 +1734,8 @@
           throw new Error("生成するテキストがありません。");
         }
 
-        const silenceLength = Math.floor(originalSampleRate * 0.3);
-        const totalLength = combinedAudio.reduce((sum, arr) => sum + arr.length, 0) + silenceLength * Math.max(0, combinedAudio.length - 1);
-        const pcmData = new Float32Array(totalLength);
-        
-        let offset = 0;
-        for (let i = 0; i < combinedAudio.length; i++) {
-          pcmData.set(combinedAudio[i], offset);
-          offset += combinedAudio[i].length;
-          if (i < combinedAudio.length - 1) {
-            offset += silenceLength;
-          }
-        }
+        const gaps = gapAfter.slice(0, -1);
+        const pcmData = concatPcmWithGaps(combinedAudio, originalSampleRate, gaps);
 
         const targetChannels = parseInt(document.getElementById('kokoroChannel').value);
         const targetSampleRate = parseInt(document.getElementById('kokoroSampleRate').value);
@@ -1654,6 +1851,7 @@
     document.getElementById('piperToggleAdvanced').addEventListener('change', (e) => {
       document.getElementById('piperAdvancedSettings').style.display = e.target.checked ? 'flex' : 'none';
     });
+    wirePauseToggle('piper');
     document.getElementById('piperSpeechSpeed').addEventListener('input', (e) => {
       document.getElementById('piperSpeedDisplay').innerText = Number(e.target.value).toFixed(1);
     });
@@ -1675,42 +1873,56 @@
         piperResultArea.style.display = 'none';
         
         let combinedPcm = [];
+        let gapAfter = [];
         let originalSampleRate = 22050; // Piper default
+        const pauseSettings = getPauseSettings('piper');
+        const blockGap = 0.3;
+        const nonemptyBlocks = [...blocks].filter(block => block.querySelector('.block-text').value.trim());
 
-        for (let b = 0; b < blocks.length; b++) {
-          const block = blocks[b];
+        for (let b = 0; b < nonemptyBlocks.length; b++) {
+          const block = nonemptyBlocks[b];
           const voiceId = block.querySelector('.block-voice').value;
           const speakerName = block.querySelector('.block-speaker-name').value.trim();
           const voiceLabel = block.querySelector('.block-voice').options[block.querySelector('.block-voice').selectedIndex].text.split(' ')[0];
           const displaySpeaker = speakerName ? speakerName : voiceLabel;
+          const isLastBlock = b === nonemptyBlocks.length - 1;
           
-          let blockText = block.querySelector('.block-text').value.trim();
-          if (!blockText) continue;
-          
-          // 年代の正規化（Kokoro同様）
-          blockText = normalizeDecadesForKokoro(blockText);
-          
-          const lines = blockText.split('\n');
-          for (let i = 0; i < lines.length; i++) {
-            let line = lines[i].trim();
-            if (!line) continue;
-            
-            piperStatusText.innerText = `音声生成中... (${displaySpeaker} - ブロック ${b + 1}/${blocks.length}, 行 ${i + 1}/${lines.length})`;
+          let blockText = normalizeDecadesForKokoro(block.querySelector('.block-text').value.trim());
+          const preparedLines = blockText.split('\n').map(l => l.trim()).filter(Boolean);
+          if (!preparedLines.length) continue;
 
-            // piperTts.predict で音声合成（WAV Blobが返る）
+          let workItems;
+          if (pauseSettings.enabled) {
+            workItems = splitTextForPauses(preparedLines.join(' '), pauseSettings);
+          } else {
+            workItems = preparedLines.map((t, idx) => ({
+              text: t,
+              pauseAfter: (idx < preparedLines.length - 1 || !isLastBlock) ? blockGap : 0,
+            }));
+          }
+
+          for (let p = 0; p < workItems.length; p++) {
+            const part = workItems[p];
+            if (!part.text.trim()) continue;
+            piperStatusText.innerText = `音声生成中... (${displaySpeaker} - ブロック ${b + 1}/${nonemptyBlocks.length}, 片 ${p + 1}/${workItems.length})`;
+
             const wavBlob = await piperTts.predict({
-              text: line,
+              text: part.text,
               voiceId: voiceId
             });
 
-            // WAVからPCMデータを抽出
             const wavArrayBuffer = await wavBlob.arrayBuffer();
             const audioCtx = new AudioContext();
             const decodedBuffer = await audioCtx.decodeAudioData(wavArrayBuffer);
             originalSampleRate = decodedBuffer.sampleRate;
-            const channelData = decodedBuffer.getChannelData(0);
-            combinedPcm.push(new Float32Array(channelData));
+            combinedPcm.push(new Float32Array(decodedBuffer.getChannelData(0)));
             audioCtx.close();
+
+            let gap = part.pauseAfter || 0;
+            if (pauseSettings.enabled && p === workItems.length - 1 && !isLastBlock) {
+              gap += blockGap;
+            }
+            gapAfter.push(gap);
           }
         }
 
@@ -1718,19 +1930,7 @@
           throw new Error("生成するテキストがありません。");
         }
 
-        // 連結（0.3秒の無音挿入）
-        const silenceLength = Math.floor(originalSampleRate * 0.3);
-        const totalLength = combinedPcm.reduce((sum, arr) => sum + arr.length, 0) + silenceLength * Math.max(0, combinedPcm.length - 1);
-        const pcmData = new Float32Array(totalLength);
-        
-        let offset = 0;
-        for (let i = 0; i < combinedPcm.length; i++) {
-          pcmData.set(combinedPcm[i], offset);
-          offset += combinedPcm[i].length;
-          if (i < combinedPcm.length - 1) {
-            offset += silenceLength;
-          }
-        }
+        const pcmData = concatPcmWithGaps(combinedPcm, originalSampleRate, gapAfter.slice(0, -1));
 
         // 速度調整
         const targetSpeed = parseFloat(document.getElementById('piperSpeechSpeed').value);
@@ -1800,6 +2000,7 @@
     const browserStopBtn = document.getElementById('browserStopBtn');
     const browserStatusText = document.getElementById('browserStatus');
     const browserDialogueContainer = document.getElementById('browserDialogueContainer');
+    let browserPauseTimer = null;
 
     // ブラウザTTS: 音声リストの読み込み
     let browserVoicesLoaded = false;
@@ -1829,6 +2030,7 @@
     document.getElementById('browserToggleAdvanced').addEventListener('change', (e) => {
       document.getElementById('browserAdvancedSettings').style.display = e.target.checked ? 'flex' : 'none';
     });
+    wirePauseToggle('browser');
     document.getElementById('browserSpeechSpeed').addEventListener('input', (e) => {
       document.getElementById('browserSpeedDisplay').innerText = Number(e.target.value).toFixed(1);
     });
@@ -1864,25 +2066,41 @@
       const speedParam = parseFloat(document.getElementById('browserSpeechSpeed').value);
       const pitchParam = parseFloat(document.getElementById('browserPitch').value);
       const volumeParam = parseFloat(document.getElementById('browserVolume').value);
+      const pauseSettings = getPauseSettings('browser');
 
-      // 全ブロック・全行のUtteranceキューを構築
+      // 全ブロックのUtteranceキューを構築（空白時間ON時は文区切り）
       const utterances = [];
-      for (let b = 0; b < blocks.length; b++) {
-        const block = blocks[b];
+      const nonemptyBlocks = [...blocks].filter(block => block.querySelector('.block-text').value.trim());
+      for (let b = 0; b < nonemptyBlocks.length; b++) {
+        const block = nonemptyBlocks[b];
         const voiceIdx = parseInt(block.querySelector('.block-voice').value);
         const speakerName = block.querySelector('.block-speaker-name').value.trim();
         const voiceObj = voices[voiceIdx] || voices[0];
         const displaySpeaker = speakerName || voiceObj.name;
         
         const blockText = block.querySelector('.block-text').value.trim();
-        if (!blockText) continue;
-        
-        const lines = blockText.split('\n');
-        for (let i = 0; i < lines.length; i++) {
-          let line = lines[i].trim();
-          if (!line) continue;
-          
-          utterances.push({ text: line, voice: voiceObj, speaker: displaySpeaker, blockIdx: b, lineIdx: i, totalBlocks: blocks.length, totalLines: lines.length });
+        const lines = blockText.split('\n').map(l => l.trim()).filter(Boolean);
+        if (!lines.length) continue;
+
+        let parts;
+        if (pauseSettings.enabled) {
+          parts = splitTextForPauses(lines.join(' '), pauseSettings);
+        } else {
+          parts = lines.map(t => ({ text: t, pauseAfter: 0 }));
+        }
+
+        for (let i = 0; i < parts.length; i++) {
+          if (!parts[i].text.trim()) continue;
+          utterances.push({
+            text: parts[i].text,
+            pauseAfter: parts[i].pauseAfter || 0,
+            voice: voiceObj,
+            speaker: displaySpeaker,
+            blockIdx: b,
+            lineIdx: i,
+            totalBlocks: nonemptyBlocks.length,
+            totalLines: parts.length,
+          });
         }
       }
 
@@ -1893,8 +2111,12 @@
         return;
       }
 
-      // 逐次的に再生
+      // 逐次的に再生（pauseAfter があれば待機）
       let idx = 0;
+      if (browserPauseTimer) {
+        clearTimeout(browserPauseTimer);
+        browserPauseTimer = null;
+      }
       function speakNext() {
         if (idx >= utterances.length) {
           browserStatusText.innerText = '読み上げ完了！';
@@ -1911,11 +2133,16 @@
         utt.pitch = pitchParam;
         utt.volume = volumeParam;
 
-        browserStatusText.innerText = `読み上げ中... (${u.speaker} - ブロック ${u.blockIdx + 1}/${u.totalBlocks}, 行 ${u.lineIdx + 1}/${u.totalLines})`;
+        browserStatusText.innerText = `読み上げ中... (${u.speaker} - ブロック ${u.blockIdx + 1}/${u.totalBlocks}, 片 ${u.lineIdx + 1}/${u.totalLines})`;
 
         utt.onend = () => {
           idx++;
-          speakNext();
+          const waitMs = Math.round((u.pauseAfter || 0) * 1000);
+          if (waitMs > 0 && idx < utterances.length) {
+            browserPauseTimer = setTimeout(speakNext, waitMs);
+          } else {
+            speakNext();
+          }
         };
         utt.onerror = (e) => {
           if (e.error !== 'canceled') {
@@ -1933,6 +2160,10 @@
 
     // ブラウザTTS: 停止
     browserStopBtn.addEventListener('click', () => {
+      if (browserPauseTimer) {
+        clearTimeout(browserPauseTimer);
+        browserPauseTimer = null;
+      }
       window.speechSynthesis.cancel();
       browserStatusText.innerText = '停止しました。';
       browserSpeakBtn.disabled = false;
